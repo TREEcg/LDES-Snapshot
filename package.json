@@ -1,11 +1,22 @@
 {
-  "name": "version-materialize",
+  "name": "@treecg/ldes-snapshot",
   "version": "0.0.1",
-  "description": "testing stuff about version-materialization",
-  "main": "index.js",
+  "description": "Create a snapshot of a version materialized LDES ",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "rm -rf dist/; tsc",
+    "release": "npm run build && npm publish --access public"
   },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "LDP",
+    "LDES",
+    "Linked Data"
+  ],
   "author": "Wout Slabbinck <wout.slabbinck@ugent.be>",
   "license": "ISC",
   "dependencies": {
