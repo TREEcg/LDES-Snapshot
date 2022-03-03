@@ -1,0 +1,23 @@
+@prefix acl: 	<http://www.w3.org/ns/auth/acl#> .
+@prefix dct: 	<http://purl.org/dc/terms/> .
+@prefix ldes: 	<https://w3id.org/ldes#> .
+@prefix ldp: 	<http://www.w3.org/ns/ldp#> .
+@prefix rdf: 	<http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix tree: 	<https://w3id.org/tree#> .
+@prefix xsd: 	<http://www.w3.org/2001/XMLSchema#> .
+@prefix ex: 	<http://example.org/> .
+
+ex:ES a ldes:EventStream;
+    ldes:versionOfPath dct:isVersionOf;
+    ldes:timestampPath dct:issued;
+    tree:member ex:resource1v0, ex:resource1v1.
+
+ex:resource1v0
+    dct:isVersionOf ex:resource1;
+    dct:issued "2021-12-15T10:00:00.000Z"^^xsd:dateTime;
+    dct:title "First version of the title".
+
+ex:resource1v1
+    dct:isVersionOf ex:resource1;
+    dct:issued "2021-12-15T12:00:00.000Z"^^xsd:dateTime;
+    dct:title "Title has been updated once".

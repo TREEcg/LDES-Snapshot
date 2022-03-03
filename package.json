@@ -1,0 +1,20 @@
+{
+  "name": "version-materialize",
+  "version": "0.0.1",
+  "description": "testing stuff about version-materialization",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Wout Slabbinck <wout.slabbinck@ugent.be>",
+  "license": "ISC",
+  "dependencies": {
+    "@treecg/version-materialize-rdf.js": "^0.0.2",
+    "n3": "^1.13.0",
+    "rdf-parse": "^2.0.0",
+    "typescript": "^4.6.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.6.0"
+  }
+}
