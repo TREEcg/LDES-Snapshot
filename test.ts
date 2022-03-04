@@ -1,11 +1,11 @@
-import {fileAsStore, storeToString, stringToStore, turtleStringToStore} from "./src/util/Conversion";
-import { materialize } from '@treecg/version-materialize-rdf.js';
-import {DataFactory, Literal, Store} from "n3";
-import {Snapshot} from "./src/Snapshot";
-import namedNode = DataFactory.namedNode;
-import {extractDateFromLiteral, extractTimestampFromLiteral} from "./src/util/TimestampUtil";
-import literal = DataFactory.literal;
+import {fileAsStore, storeToString, turtleStringToStore} from "./src/util/Conversion";
+import {DataFactory, Literal} from "n3";
+// import {Snapshot} from "./dist/index"; // can be used to test whether package works as intended?
+import {extractDateFromLiteral} from "./src/util/TimestampUtil";
 import {XSD} from "./src/util/Vocabularies";
+import namedNode = DataFactory.namedNode;
+import literal = DataFactory.literal;
+import {Snapshot} from "./src/Snapshot";
 
 async function run(){
     const store = await fileAsStore('versions.ttl')
@@ -50,9 +50,9 @@ ex:ES1 a ldes:EventStream;
            rdfs:label "A v0.0.2"
        ].`
 
-    const store =await turtleStringToStore(example)
+    const store = await turtleStringToStore(example)
     const snapshot = new Snapshot(store);
-    let time:Literal = literal("2020-10-05T12:00:00Z",namedNode(XSD.dateTime))
+    let time:Literal = literal("2020-10-05T11:00:00Z",namedNode(XSD.dateTime))
 
     console.log('input:')
     console.log(storeToString(store))
@@ -63,5 +63,5 @@ ex:ES1 a ldes:EventStream;
 
 }
 
-// run()
+run()
 ldesExample()

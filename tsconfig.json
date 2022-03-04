@@ -14,10 +14,10 @@
   "include": [
     "index.ts",
     "./src/**/*",
-    "./tests/**/*"
+    "./test/**/*"
   ],
   "exclude": [
     "node_modules",
-    "./tests/**/*"
+    "./test/**/*"
   ]
 }
