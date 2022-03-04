@@ -1,9 +1,3 @@
-/***************************************
- * Title: Snapshot
- * Description: Class to create a materialized LDES at a certain timestamp (only works for small LDESes)
- * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
- * Created on 03/03/2022
- *****************************************/
 import {DataFactory, Literal, Store} from "n3";
 import {IMaterializeOptions, materialize} from "@treecg/version-materialize-rdf.js";
 import namedNode = DataFactory.namedNode;
@@ -14,6 +8,12 @@ import {
     NamedNode
 } from "@rdfjs/types";
 
+/***************************************
+ * Title: Snapshot
+ * Description: Class to create a materialized LDES at a certain timestamp (only works for small LDESes)
+ * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
+ * Created on 03/03/2022
+ *****************************************/
 export class Snapshot {
     private baseStore: Store;
     private materializedStore: Store;
@@ -78,18 +78,29 @@ export class Snapshot {
     }
 
     /**
-     * Creates a snapshot at current timestamp
-     * or at a given timestamp
+     * Creates a snapshot from a version materialized LDES. (see: https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)
+     * Default:
+     * uses "http://example.org/snapshot" as identifier for the snapshot (tree:collection)
+     * and uses the current time for ldes:versionMaterializationUntil
+     * @param options optional extra paramaters for creating the snapshot
+     * @return {Store}
      */
-    create(dateTimeObject: Date): Store {
+    create(options?: ISnapshotOptions): Store {
+        let date = new Date();
+        let snapshotIdentifier: NamedNode = namedNode('http://example.org/snapshot')
+        if (options) {
+            date = options.date ? options.date : date
+            snapshotIdentifier = options.snapshotIdentifier ? namedNode(options.snapshotIdentifier) : snapshotIdentifier
+        }
+
+
         const snapshotStore = new Store()
         // add version specific triples: `ldes:versionMaterializationOf` and `ldes:versionMaterializationUntil`
         // Note: materializedStore doesn't handle triples well that are not part of a member
 
-        const snapshotIdentifier = namedNode('http://example.org/snapshot') // todo: make configurable
         snapshotStore.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(TREE.Collection)))
         snapshotStore.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(this.ldesIRI)))
-        snapshotStore.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(dateTimeObject)))
+        snapshotStore.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(date)))
 
         // versionObjects are the materialized version objects
         // They will become the only members of the new tree:Collection
@@ -117,8 +128,8 @@ export class Snapshot {
                     throw Error(`Found ${dateTimeLiterals.length} dateTimeLiterals for version ${id}, only expected one.`)
                 }
                 const versionTime = extractTimestampFromLiteral(dateTimeLiterals[0] as Literal)
-                // calculate the most recent timestamp which is not newer than the given timestamp (the dateTimeObject)
-                if (versionTime <= dateTimeObject.getTime() && mostRecentTimestamp < versionTime) {
+                // calculate the most recent timestamp which is not newer than the given timestamp (the date)
+                if (versionTime <= date.getTime() && mostRecentTimestamp < versionTime) {
                     mostRecentTimestamp = versionTime
                     mostRecentId = id
                 }
@@ -135,6 +146,11 @@ export class Snapshot {
         return snapshotStore
     }
 
+}
+
+export interface ISnapshotOptions {
+    date?: Date;
+    snapshotIdentifier?: string;
 }
 
 // copied from https://stackoverflow.com/a/43467144

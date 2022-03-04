@@ -4,7 +4,7 @@ import {DataFactory} from "n3";
 import namedNode = DataFactory.namedNode;
 
 describe("A Snapshot", () => {
-    const ldesString = `
+    const ldesExample = `
 @prefix dct: <http://purl.org/dc/terms/> .
 @prefix ldes: <https://w3id.org/ldes#> .
 @prefix tree: <https://w3id.org/tree#> .
@@ -26,6 +26,12 @@ ex:resource1v1
     dct:issued "2021-12-15T12:00:00.000Z"^^xsd:dateTime;
     dct:title "Title has been updated once".
 `
+    let snapshotExample: Snapshot
+    beforeAll(async () => {
+        const store = await turtleStringToStore(ldesExample)
+        snapshotExample = new Snapshot(store)
+    })
+
     it("errors when the LDES in the store has incorrect amount of no versionOfPath properties.", async () => {
         const ldes = `
 @prefix ldes: <https://w3id.org/ldes#> .
@@ -110,28 +116,25 @@ ex:resource1v0
 `
         const store = await turtleStringToStore(ldes)
         const snapshot = new Snapshot(store)
-        expect(() => snapshot.create(new Date())).toThrow(Error)
+        expect(() => snapshot.create()).toThrow(Error)
     })
     it("can materialize an ldes with different options", async () => {
         const options = {
-            "versionOfProperty":namedNode('http://purl.org/dc/terms/isVersionOf'), // defaults to dcterms:isVersionOf
-            "timestampProperty" : namedNode('http://purl.org/dc/terms/created'), // defaults to dcterms:created, but there may be good reasons to change this to e.g., prov:generatedAtTime
+            "versionOfProperty": namedNode('http://purl.org/dc/terms/isVersionOf'), // defaults to dcterms:isVersionOf
+            "timestampProperty": namedNode('http://purl.org/dc/terms/created'), // defaults to dcterms:created, but there may be good reasons to change this to e.g., prov:generatedAtTime
             "addRdfStreamProcessingTriple": true
         };
-        const store = await turtleStringToStore(ldesString)
+        const store = await turtleStringToStore(ldesExample)
         const snapshot = new Snapshot(store)
         expect(snapshot.materialize(options)).toBeDefined()
 
     })
     describe('creates', () => {
         it('a snapshot as defined by the spec on an LDES', async () => {
-
-            const store = await turtleStringToStore(ldesString)
-            const snapshot = new Snapshot(store)
             const date = new Date()
-            const snapshotStore = snapshot.create(date)
+            const snapshotStore = snapshotExample.create({date})
             const materializedldes =
-`<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
+                `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationUntil> "${date.toISOString()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://example.org/snapshot> <https://w3id.org/tree#member> <http://example.org/resource1> .
@@ -143,7 +146,7 @@ ex:resource1v0
         })
 
         it('a snapshot as defined by the spec on an LDES with blank node members', async () => {
-            const ldes =`
+            const ldes = `
 @prefix dct: <http://purl.org/dc/terms/> .
 @prefix ldes: <https://w3id.org/ldes#> .
 @prefix tree: <https://w3id.org/tree#> .
@@ -169,9 +172,9 @@ ex:ES1 a ldes:EventStream;
             const store = await turtleStringToStore(ldes)
             const snapshot = new Snapshot(store)
             const date = new Date()
-            const snapshotStore = snapshot.create(date)
+            const snapshotStore = snapshot.create({date})
             const materializedldes =
-`<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
+                `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES1> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationUntil> "${date.toISOString()}"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://example.org/snapshot> <https://w3id.org/tree#member> <A> .
@@ -183,11 +186,9 @@ ex:ES1 a ldes:EventStream;
             expect(storeToString(snapshotStore)).toBe(materializedldes)
         })
         it('a snapshot with correct members based on date', async () => {
-            const store = await turtleStringToStore(ldesString)
-            const snapshot = new Snapshot(store)
             // Date before the first member
             const dateBefore = new Date('2021-12-15T09:00:00.000Z')
-            const snapshotStoreBefore = snapshot.create(dateBefore)
+            const snapshotStoreBefore = snapshotExample.create({date: dateBefore})
             const materializedldesBefore =
                 `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES> .
@@ -196,8 +197,8 @@ ex:ES1 a ldes:EventStream;
             expect(storeToString(snapshotStoreBefore)).toBe(materializedldesBefore)
 
             // date exact at first member added to LDES
-            const dateExactFirst =new Date('2021-12-15T10:00:00.000Z')
-            const snapshotStoreExactFirst = snapshot.create(dateExactFirst)
+            const dateExactFirst = new Date('2021-12-15T10:00:00.000Z')
+            const snapshotStoreExactFirst = snapshotExample.create({date: dateExactFirst})
             const materializedldesExactFirst =
                 `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES> .
@@ -208,9 +209,10 @@ ex:ES1 a ldes:EventStream;
 <http://example.org/resource1> <http://purl.org/dc/terms/issued> "2021-12-15T10:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 `
             expect(storeToString(snapshotStoreExactFirst)).toBe(materializedldesExactFirst)
-// date one second after first member
-            const dateAfterFirst =new Date('2021-12-15T10:00:01.000Z')
-            const snapshotStoreAfterFirst = snapshot.create(dateAfterFirst)
+
+            // date one second after first member
+            const dateAfterFirst = new Date('2021-12-15T10:00:01.000Z')
+            const snapshotStoreAfterFirst = snapshotExample.create({date: dateAfterFirst})
             const materializedldesAfterFirst =
                 `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES> .
@@ -221,7 +223,12 @@ ex:ES1 a ldes:EventStream;
 <http://example.org/resource1> <http://purl.org/dc/terms/issued> "2021-12-15T10:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 `
             expect(storeToString(snapshotStoreAfterFirst)).toBe(materializedldesAfterFirst)
-// date after already tested by first 2 tests in Create
+            // date after already tested by first 2 tests in Create
+        })
+        it("a snapshot using a custom identifier for the new tree:collection at current time.", () => {
+            const snapshotIdentifier = 'https://snapshot.ldes/'
+            const snapshotStore = snapshotExample.create({snapshotIdentifier})
+            expect(storeToString(snapshotStore)).toContain(snapshotIdentifier)
         })
     })
 })

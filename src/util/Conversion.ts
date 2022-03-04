@@ -27,7 +27,7 @@ export async function ldjsonToStore(text: string, baseIRI?: string): Promise<Sto
  * @returns {string}
  */
 export function storeToString(store: Store): string {
-  const writer = new Writer({ format: 'text/n3' });
+  const writer = new Writer();
   return writer.quadsToString(store.getQuads(null, null, null, null));
 }
 
