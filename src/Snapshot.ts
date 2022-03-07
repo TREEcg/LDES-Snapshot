@@ -115,7 +115,6 @@ export class Snapshot {
             let mostRecentId = null
 
             for (const {id} of versions) {
-                // note: only handles xsd:dateTime
                 let dateTimeLiterals;
                 if (isValidHttpUrl(id)) {
                     dateTimeLiterals = this.materializedStore.getObjects(id, this.timestampProperty, null)

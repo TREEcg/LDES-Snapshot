@@ -8,17 +8,19 @@ import {Store, Writer} from "n3";
 import {ParseOptions} from "rdf-parse/lib/RdfParser";
 import {readFileSync} from "fs";
 import Path from "path";
+import {VersionAwareEventStream} from "./VersionAwareEventStream";
+import {Readable} from "stream";
 
 const rdfParser = require("rdf-parse").default;
 const storeStream = require("rdf-store-stream").storeStream;
 const streamifyString = require('streamify-string');
 
 export async function turtleStringToStore(text: string, baseIRI?: string): Promise<Store> {
-  return await stringToStore(text, {contentType: 'text/turtle', baseIRI});
+    return await stringToStore(text, {contentType: 'text/turtle', baseIRI});
 }
 
 export async function ldjsonToStore(text: string, baseIRI?: string): Promise<Store> {
-  return await stringToStore(text, {contentType: 'application/ld+json', baseIRI});
+    return await stringToStore(text, {contentType: 'application/ld+json', baseIRI});
 }
 
 /**
@@ -27,14 +29,14 @@ export async function ldjsonToStore(text: string, baseIRI?: string): Promise<Sto
  * @returns {string}
  */
 export function storeToString(store: Store): string {
-  const writer = new Writer();
-  return writer.quadsToString(store.getQuads(null, null, null, null));
+    const writer = new Writer();
+    return writer.quadsToString(store.getQuads(null, null, null, null));
 }
 
 export async function stringToStore(text: string, options: ParseOptions): Promise<Store> {
-  const textStream = streamifyString(text);
-  const quadStream = rdfParser.parse(textStream, options);
-  return await storeStream(quadStream);
+    const textStream = streamifyString(text);
+    const quadStream = rdfParser.parse(textStream, options);
+    return await storeStream(quadStream);
 }
 
 
@@ -45,7 +47,12 @@ export async function stringToStore(text: string, options: ParseOptions): Promis
  * @returns {Promise<Store>}
  */
 export async function fileAsStore(path: string, contentType?: string): Promise<Store> {
-  contentType = contentType ? contentType : 'text/turtle';
-  const text = readFileSync(Path.join(path), "utf8");
-  return await stringToStore(text, {contentType});
+    contentType = contentType ? contentType : 'text/turtle';
+    const text = readFileSync(Path.join(path), "utf8");
+    return await stringToStore(text, {contentType});
 }
+
+// todo: exercise for myself, use a store to create a member stream
+// export function storeAsMemberStream(path: string, contentType?: string): Readable {
+//     return new VersionAwareEventStream()
+// }
