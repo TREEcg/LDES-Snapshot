@@ -8,7 +8,7 @@ import {DataFactory, Store, Writer} from "n3";
 import {ParseOptions} from "rdf-parse/lib/RdfParser";
 import {readFileSync} from "fs";
 import Path from "path";
-import {VersionAwareEventStream} from "../VersionAwareEventStream";
+import {SnapshotTransform} from "../SnapshotTransform";
 import {EventEmitter, Readable} from "stream";
 import {TREE} from "./Vocabularies";
 import {Quad} from "@rdfjs/types";

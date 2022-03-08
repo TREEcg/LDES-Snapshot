@@ -1,5 +1,5 @@
 /***************************************
- * Title: VersionAwareEventStream
+ * Title: SnapshotTransform
  * Description: Transforms a Member stream to a stream of materialized Members at a given snapshot time.
  * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
  * Created on 07/03/2022
@@ -14,6 +14,7 @@ import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import {materialize} from "@treecg/version-materialize-rdf.js";
 import {Quad} from "@rdfjs/types";
+import {createSnapshotMetadata} from "./util/snapshotUtil";
 
 export interface ISnapshotOptions {
     date?: Date;
@@ -23,51 +24,11 @@ export interface ISnapshotOptions {
     timestampPath: string;
 }
 
-export function extractSnapshotOptions(store: Store, ldesIdentifier: string): ISnapshotOptions {
-    return {
-        ldesIdentifier: ldesIdentifier,
-        timestampPath: retrieveTimestampProperty(store, ldesIdentifier),
-        versionOfPath: retrieveVersionOfProperty(store, ldesIdentifier),
-    }
-}
-
-export function createSnapshotMetadata(options: ISnapshotOptions): Store {
-    options.date = options.date ? options.date : new Date();
-    options.snapshotIdentifier = options.snapshotIdentifier ? options.snapshotIdentifier : `${options.ldesIdentifier}Snapshot`;
-
-    const store = new Store()
-    let snapshotIdentifier: NamedNode = namedNode(options.snapshotIdentifier)
-    store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(TREE.Collection)))
-    store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(options.ldesIdentifier)))
-    store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(options.date)))
-    return store
-}
-
-function retrieveVersionOfProperty(store: Store, ldesIdentifier: string): string {
-    const versionOfProperties = store.getObjects(namedNode(ldesIdentifier), LDES.versionOfPath, null)
-    if (versionOfProperties.length !== 1) {
-        // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
-        // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-        throw Error(`Found ${versionOfProperties.length} versionOfProperties, only expected one`)
-    }
-    return versionOfProperties[0].id
-}
-
-function retrieveTimestampProperty(store: Store, ldesIdentifier: string): string {
-    const timestampProperties = store.getObjects(namedNode(ldesIdentifier), LDES.timestampPath, null)
-    if (timestampProperties.length !== 1) {
-        // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
-        // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-        throw Error(`Found ${timestampProperties.length} timestampProperties, only expected one`)
-    }
-    return timestampProperties[0].id
-}
-
 // export interface MemberTransformStream<M extends Member> extends EventEmitter {
 //     _transform(chunck : Member, enc:any, done:any): void;
 // }
 
-export class VersionAwareEventStream extends Transform {
+export class SnapshotTransform extends Transform {
     // materializedMap is a map that has as key the version identifier and as value the materialized quads of the member
     private materializedMap: Map<string, Array<Quad>>;
     // a map that has as key the version identifier and as a value the time of the current saved (in materializedMap)
