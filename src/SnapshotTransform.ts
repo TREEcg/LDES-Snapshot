@@ -7,14 +7,12 @@
 import {Transform} from 'stream';
 import {Member} from '@treecg/types'
 import {DataFactory, Literal, Store} from "n3";
-import {LDES, RDF, TREE, XSD} from "./util/Vocabularies";
-import {NamedNode} from "@rdfjs/types";
-import {dateToLiteral, extractDateFromLiteral, timestampToLiteral} from "./util/TimestampUtil";
+import {Quad} from "@rdfjs/types";
+import {extractDateFromLiteral} from "./util/TimestampUtil";
+import {materialize} from "@treecg/version-materialize-rdf.js";
+import {createSnapshotMetadata} from "./util/SnapshotUtil";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
-import {materialize} from "@treecg/version-materialize-rdf.js";
-import {Quad} from "@rdfjs/types";
-import {createSnapshotMetadata} from "./util/snapshotUtil";
 
 export interface ISnapshotOptions {
     date?: Date;
@@ -89,7 +87,7 @@ export class SnapshotTransform extends Transform {
         // called at the end
 
         this.materializedMap.forEach((value, key) => {
-            this.push({id: key, quads: value})
+            this.push({id: namedNode(key), quads: value})
         })
         this.push(null)
     }

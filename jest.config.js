@@ -17,7 +17,9 @@ module.exports = {
         '/dist/',
         '/node_modules/',
         '/test/',
-        '/src/util/'
+        '/src/util/Vocabularies.ts',
+        '/src/util/Conversion.ts',
+        '/src/util/TimestampUtil.ts',
     ],
     moduleNameMapper: {
         '^jose/(.*)$': '<rootDir>/node_modules/jose/dist/node/cjs/$1',

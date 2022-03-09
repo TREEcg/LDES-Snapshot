@@ -1,12 +1,7 @@
-import {DataFactory, Literal, Store} from "n3";
-import {IMaterializeOptions, materialize} from "@treecg/version-materialize-rdf.js";
-import namedNode = DataFactory.namedNode;
-import {DCT, LDES, RDF, TREE} from "./util/Vocabularies";
-import quad = DataFactory.quad;
-import {dateToLiteral, extractTimestampFromLiteral, timestampToLiteral} from "./util/TimestampUtil";
-import {
-    NamedNode
-} from "@rdfjs/types";
+import {DataFactory, Store} from "n3";
+import {createSnapshotMetadata} from "./util/SnapshotUtil";
+import {ISnapshotOptions, SnapshotTransform} from "./SnapshotTransform";
+import {memberStreamtoStore, storeAsMemberStream} from "./util/Conversion";
 
 /***************************************
  * Title: Snapshot
@@ -16,151 +11,33 @@ import {
  *****************************************/
 export class Snapshot {
     private baseStore: Store;
-    private materializedStore: Store;
-    private versionOfProperty: NamedNode;
-    private timestampProperty: NamedNode;
-    private readonly ldesIRI: string;
 
     constructor(store: Store) {
         this.baseStore = store;
-        this.ldesIRI = this.retrieveLdesIRI()
-        this.versionOfProperty = namedNode(this.retrieveVersionOfProperty())
-        this.timestampProperty = namedNode(this.retrieveTimestampProperty())
-        this.materializedStore = this.materialize()
-    }
-
-    private retrieveLdesIRI(): string {
-        const possibleIdentifiers = this.baseStore.getSubjects(RDF.type, LDES.EventStream, null)
-        if (possibleIdentifiers.length !== 1) {
-            throw Error(`Found ${possibleIdentifiers.length} LDESs, only expected one`)
-        }
-        return possibleIdentifiers[0].id
-    }
-
-    private retrieveVersionOfProperty(): string {
-        const versionOfProperties = this.baseStore.getObjects(namedNode(this.ldesIRI), LDES.versionOfPath, null)
-        if (versionOfProperties.length !== 1) {
-            // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
-            // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-            throw Error(`Found ${versionOfProperties.length} versionOfProperties, only expected one`)
-        }
-        return versionOfProperties[0].id
-    }
-
-    private retrieveTimestampProperty(): string {
-        const timestampProperties = this.baseStore.getObjects(namedNode(this.ldesIRI), LDES.timestampPath, null)
-        if (timestampProperties.length !== 1) {
-            // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
-            // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-            throw Error(`Found ${timestampProperties.length} timestampProperties, only expected one`)
-        }
-        return timestampProperties[0].id
     }
 
     /**
-     * Materialize the LDES (using @treecg/version-materialize-rdf.js), save this materialized LDES
-     * and return it
-     * @param options
-     * @returns {Store}
-     */
-    materialize(options?: IMaterializeOptions): Store {
-        if (!options) {
-            options = {
-                "versionOfProperty": this.versionOfProperty,
-                "timestampProperty": this.timestampProperty,
-            };
-        } else {
-            this.timestampProperty = options.timestampProperty
-            this.versionOfProperty = options.versionOfProperty
-        }
-        this.materializedStore = new Store(materialize(this.baseStore.getQuads(null, null, null, null), options))
-        return this.materializedStore
-    }
-
-    /**
-     * Creates a snapshot from a version materialized LDES. (see: https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)
+     * Creates a snapshot from a version LDES. (see: https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)
      * Default:
      * uses "http://example.org/snapshot" as identifier for the snapshot (tree:collection)
      * and uses the current time for ldes:versionMaterializationUntil
      * @param options optional extra paramaters for creating the snapshot
-     * @return {Store}
+     * @return {Promise<Store>}
      */
-    create(options?: ISnapshotOptions): Store {
-        let date = new Date();
-        let snapshotIdentifier: NamedNode = namedNode('http://example.org/snapshot')
-        if (options) {
-            date = options.date ? options.date : date
-            snapshotIdentifier = options.snapshotIdentifier ? namedNode(options.snapshotIdentifier) : snapshotIdentifier
-        }
+    async create(options: ISnapshotOptions): Promise<Store> {
+        options.date = options.date ? options.date : new Date();
+        options.snapshotIdentifier = options.snapshotIdentifier ? options.snapshotIdentifier : 'http://example.org/snapshot';
 
 
-        const snapshotStore = new Store()
-        // add version specific triples: `ldes:versionMaterializationOf` and `ldes:versionMaterializationUntil`
-        // Note: materializedStore doesn't handle triples well that are not part of a member
+        const snapshotStore = createSnapshotMetadata(options)
+        const memberStream = storeAsMemberStream(this.baseStore)
+        const snapshotTransformer = new SnapshotTransform(options);
+        const transformationOutput = memberStream.pipe(snapshotTransformer)
+        const transformedStore = await memberStreamtoStore(transformationOutput, options.snapshotIdentifier)
+        snapshotStore.addQuads(transformedStore.getQuads(null,null,null,null))
 
-        snapshotStore.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(TREE.Collection)))
-        snapshotStore.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(this.ldesIRI)))
-        snapshotStore.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(date)))
-
-        // versionObjects are the materialized version objects
-        // They will become the only members of the new tree:Collection
-        const versionObjects = this.materializedStore.getObjects(null, TREE.member, null)
-
-        // per version object, take the most recent one and add that to the new store
-        for (const versionObject of versionObjects) {
-            // the different version ids of the versionObject
-            const versions = this.materializedStore.getObjects(versionObject, DCT.hasVersion, null)
-            // most recent till snapshot date
-            let mostRecentTimestamp = 0
-            let mostRecentId = null
-
-            for (const {id} of versions) {
-                let dateTimeLiterals;
-                if (isValidHttpUrl(id)) {
-                    dateTimeLiterals = this.materializedStore.getObjects(id, this.timestampProperty, null)
-                } else {
-                    //blank node
-                    dateTimeLiterals = this.materializedStore.getObjects(namedNode('_:' + id), this.timestampProperty, null)
-                }
-
-                if (dateTimeLiterals.length !== 1) {
-                    throw Error(`Found ${dateTimeLiterals.length} dateTimeLiterals for version ${id}, only expected one.`)
-                }
-                const versionTime = extractTimestampFromLiteral(dateTimeLiterals[0] as Literal)
-                // calculate the most recent timestamp which is not newer than the given timestamp (the date)
-                if (versionTime <= date.getTime() && mostRecentTimestamp < versionTime) {
-                    mostRecentTimestamp = versionTime
-                    mostRecentId = id
-                }
-
-            }
-            // add shapshot member to collection
-            if (mostRecentId) {
-                const quads = this.materializedStore.getQuads(versionObject, null, null, namedNode(mostRecentId))
-                snapshotStore.addQuads(quads.map(q => quad(q.subject, q.predicate, q.object)))
-                snapshotStore.add(quad(namedNode(versionObject.id), this.timestampProperty, timestampToLiteral(mostRecentTimestamp)))
-                snapshotStore.add(quad(snapshotIdentifier, namedNode(TREE.member), namedNode(versionObject.id)))
-            }
-        }
         return snapshotStore
     }
 
 }
 
-export interface ISnapshotOptions {
-    date?: Date;
-    snapshotIdentifier?: string;
-}
-
-// copied from https://stackoverflow.com/a/43467144
-function isValidHttpUrl(string: string): boolean {
-    let url;
-
-    try {
-        url = new URL(string);
-    } catch (_) {
-        return false;
-    }
-
-    return url.protocol === "http:" || url.protocol === "https:";
-}

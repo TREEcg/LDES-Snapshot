@@ -41,7 +41,7 @@ export function retrieveVersionOfProperty(store: Store, ldesIdentifier: string):
     if (versionOfProperties.length !== 1) {
         // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
         // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-        throw Error(`Found ${versionOfProperties.length} versionOfProperties, only expected one`)
+        throw Error(`Found ${versionOfProperties.length} versionOfProperties for ${ldesIdentifier}, only expected one`)
     }
     return versionOfProperties[0].id
 }
@@ -57,7 +57,7 @@ export function retrieveTimestampProperty(store: Store, ldesIdentifier: string):
     if (timestampProperties.length !== 1) {
         // https://semiceu.github.io/LinkedDataEventStreams/#version-materializations
         // A version materialization can be defined only if the original LDES defines both ldes:versionOfPath and ldes:timestampPath.
-        throw Error(`Found ${timestampProperties.length} timestampProperties, only expected one`)
+        throw Error(`Found ${timestampProperties.length} timestampProperties for ${ldesIdentifier}, only expected one`)
     }
     return timestampProperties[0].id
 }

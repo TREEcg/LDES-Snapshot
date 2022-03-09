@@ -8,13 +8,10 @@ import {DataFactory, Store, Writer} from "n3";
 import {ParseOptions} from "rdf-parse/lib/RdfParser";
 import {readFileSync} from "fs";
 import Path from "path";
-import {SnapshotTransform} from "../SnapshotTransform";
 import {EventEmitter, Readable} from "stream";
 import {TREE} from "./Vocabularies";
-import {Quad} from "@rdfjs/types";
 import {Member} from "@treecg/types";
 import namedNode = DataFactory.namedNode;
-import quad = DataFactory.quad;
 
 const rdfParser = require("rdf-parse").default;
 const storeStream = require("rdf-store-stream").storeStream;
