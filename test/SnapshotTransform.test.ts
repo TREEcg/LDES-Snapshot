@@ -79,7 +79,7 @@ ex:resource1v1
             expect(extractDateFromLiteral(dateLiteral)).toStrictEqual(new Date("2021-12-15T12:00:00.000Z"))
         })
     })
-    it("test", async () => {
+    it("makes it possible the stream of snapshot members to a store", async () => {
         const snapshotTransformer = new SnapshotTransform(snapshotOptions)
         const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)

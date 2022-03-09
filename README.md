@@ -8,9 +8,22 @@ Note: This package uses [@treecg/version-materialize-rdf.js](https://github.com/
 
 ## How to create a snapshot
 
+First, you have to install the package.
+
 ```bash
 npm install @treecg/ldes-snapshot
 ```
+
+To create a snapshot of an LDES, there are two options.
+
+The first option is to create a snapshot on a N3 Store. This way of creating a snapshot is straightforward. Load the ldes in a Store and then create the snapshot. As simple as that!
+However, there is a downside: This approach will only work for an LDES that can be completely be loaded into memory. Which means it only works for small LDESs.
+
+The second option is to create a snapshot streamingwise using a [Transform](https://nodejs.org/api/stream.html#class-streamtransform).
+As input a stream of [members](https://github.com/TREEcg/types/blob/main/lib/Member.ts) is required. This stream is then piped through the transformer which will, when the stream stops, emit a stream of snapshot members (which are version materialized).
+While working with streams might be a little more difficult, it allows to create a snapshot of a bigger LDESs as an LDES does not have to be loaded in memory. 
+
+## Creating a snapshot using an N3 Store
 
 Below is an example of how to use this package. As LDES, the example from [version materialization ](https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)in the LDES specification is used.
 
@@ -51,8 +64,12 @@ const store = await storeStream(quadStream);
 // load the ldes store
 const snapshot = new Snapshot(store);
 // create the snapshot at a given time
-const snapshotCreated = snapshot.create({date: new Date("2020-10-05T12:00:00Z")})
-// Note: when no arguments are given, a snapshot is taken using the current time
+const snapshotCreated = await snapshot.create({
+        date: new Date("2020-10-05T12:00:00Z"),
+        ldesIdentifier: "http://example.org/ES1",
+        versionOfPath: "http://purl.org/dc/terms/isVersionOf",
+        timestampPath: "http://purl.org/dc/terms/created",
+})
 ```
 
 When converting the store back to string, the following output is achieved
@@ -71,7 +88,7 @@ console.log(writer.quadsToString(snapshotCreated.getQuads()))
 <A> <http://purl.org/dc/terms/hasVersion> <n3-0> .
 <A> <https://www.w3.org/2002/07/owl#versionInfo> "v0.0.1" .
 <A> <http://www.w3.org/2000/01/rdf-schema#label> "A v0.0.1" .
-<A> <http://purl.org/dc/terms/created> "2020-10-05T11:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<A> <http://purl.org/dc/terms/created> "2020-10-05T11:00:00"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 
 ```
 
@@ -85,7 +102,73 @@ ex:snapshot tree:member <A> .
 <A> dct:hasVersion <n3-0> .
 <A> owl:versionInfo "v0.0.1" .
 <A> rdfs:label "A v0.0.1" .
-<A> dct:created "2020-10-05T11:00:00.000Z"^^xsd:dateTime .
+<A> dct:created "2020-10-05T11:00:00"^^xsd:dateTime .
+```
+
+## Creating a snapshot using streams
+
+```javascript
+const SnapshotTransform = require('@treecg/ldes-snapshot').SnapshotTransform
+const Readable = "stream".Readable
+
+// Note: uses the store defined in the first option of creating a snapshot
+const members = store.getObjects(null, TREE.member, null)
+const memberStream = new Readable({
+    objectMode: true,
+    read() {
+        for (let member of members) {
+            this.push({
+                id: member,
+                quads: store.getQuads(member, null, null, null)
+            })
+        }
+        this.push(null)
+    }
+})
+
+const snapshotOptions = {
+            date: new Date(),
+            ldesIdentifier: "http://example.org/ES1",
+            snapshotIdentifier: "http://example.org/snapshot",
+            versionOfPath: "http://purl.org/dc/terms/isVersionOf",
+            timestampPath: "http://purl.org/dc/terms/created",
+        }
+const snapshotTransformer = new SnapshotTransform(snapshotOptions)
+const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
+
+const Writer = require("n3").Writer
+const writer = new Writer();
+
+memberStreamTransformed.on('metadata', quads => {
+console.log('metadata')
+console.log(writer.quadsToString(quads))
+})
+
+memberStreamTransformed.on('data', ({id, quads}) => {
+console.log(`member: ${id.value}`)
+console.log(writer.quadsToString(quads))
+})
+
+memberStreamTransformed.on('end', () => {
+console.log('done')
+})
+```
+
+Which will output the following
+
+```bash
+metadata
+<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
+<http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES1> .
+<http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationUntil> "2022-03-09T11:47:10.870Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+
+member: A
+<A> <http://purl.org/dc/terms/hasVersion> <n3-1> .
+<A> <http://purl.org/dc/terms/created> "2020-10-06T13:00:00Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
+<A> <https://www.w3.org/2002/07/owl#versionInfo> "v0.0.2" .
+<A> <http://www.w3.org/2000/01/rdf-schema#label> "A v0.0.2" .
+
+done
 ```
 
 
