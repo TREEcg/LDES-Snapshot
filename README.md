@@ -109,10 +109,10 @@ ex:snapshot tree:member <A> .
 
 ```javascript
 const SnapshotTransform = require('@treecg/ldes-snapshot').SnapshotTransform
-const Readable = "stream".Readable
+const Readable = require("stream").Readable
 
 // Note: uses the store defined in the first option of creating a snapshot
-const members = store.getObjects(null, TREE.member, null)
+const members = store.getObjects(null, 'https://w3id.org/tree#member', null)
 const memberStream = new Readable({
     objectMode: true,
     read() {
