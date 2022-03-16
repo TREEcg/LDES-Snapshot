@@ -94,7 +94,7 @@ const snapshot = new Snapshot(store);
 const snapshotCreated = await snapshot.create({
     date: new Date("2020-10-05T12:00:00Z"),
     ldesIdentifier: "http://example.org/ES1",
-    materialization: true
+    materialized: true
 })
 ```
 
@@ -158,7 +158,7 @@ const snapshotOptions = {
     snapshotIdentifier: "http://example.org/snapshot",
     versionOfPath: "http://purl.org/dc/terms/isVersionOf",
     timestampPath: "http://purl.org/dc/terms/created",
-    materializations: true
+    materialized: true
 }
 const snapshotTransformer = new SnapshotTransform(snapshotOptions)
 const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
