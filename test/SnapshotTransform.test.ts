@@ -109,7 +109,7 @@ ex:resource1v1
         const resourceIdentifier = 'http://example.org/resource2'
         const dateLiteral = dateToLiteral(new Date("2020-10-05T11:00:00Z"))
         memberStream.push({
-            id: versionSpecificID, quads: [
+            id: namedNode(versionSpecificID), quads: [
                 quad(namedNode(versionSpecificID), namedNode(DCT.created), dateLiteral),
                 quad(namedNode(versionSpecificID), namedNode(DCT.title), literal("some Title.")),
             ]
@@ -126,7 +126,7 @@ ex:resource1v1
         const versionSpecificID = "http://example.org/resource2v0"
         const resourceIdentifier = 'http://example.org/resource2'
         memberStream.push({
-            id: versionSpecificID, quads: [
+            id: namedNode(versionSpecificID), quads: [
                 quad(namedNode(versionSpecificID), namedNode(DCT.isVersionOf), namedNode(resourceIdentifier)),
                 quad(namedNode(versionSpecificID), namedNode(DCT.title), literal("some Title.")),
             ]

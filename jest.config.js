@@ -20,6 +20,7 @@ module.exports = {
         '/src/util/Vocabularies.ts',
         '/src/util/Conversion.ts',
         '/src/util/TimestampUtil.ts',
+        'src/logging'
     ],
     moduleNameMapper: {
         '^jose/(.*)$': '<rootDir>/node_modules/jose/dist/node/cjs/$1',

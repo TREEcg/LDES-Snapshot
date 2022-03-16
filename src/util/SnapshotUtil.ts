@@ -75,3 +75,20 @@ export function extractSnapshotOptions(store: Store, ldesIdentifier: string): IS
         versionOfPath: retrieveVersionOfProperty(store, ldesIdentifier),
     }
 }
+
+export function isMember(data: any): boolean {
+    if (typeof data !== 'object' &&
+        !Array.isArray(data) &&
+        data !== null) {
+        return false
+    }
+    if (!(data.id && typeof data.id.value === 'string')) {
+        return false
+    }
+
+    if (data.quads && Array.isArray(data.quads)) {
+        if (data.quads.length > 0 && data.quads[0].termType === 'Quad') {
+            return true
+        } else return false
+    } else return false
+}

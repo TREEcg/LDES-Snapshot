@@ -10,9 +10,10 @@ import {DataFactory, Literal, Store} from "n3";
 import {Quad} from "@rdfjs/types";
 import {extractDateFromLiteral} from "./util/TimestampUtil";
 import {materialize} from "@treecg/version-materialize-rdf.js";
-import {createSnapshotMetadata} from "./util/SnapshotUtil";
+import {createSnapshotMetadata, isMember} from "./util/SnapshotUtil";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
+import {Logger} from "./logging/Logger";
 
 export interface ISnapshotOptions {
     date?: Date;
@@ -23,6 +24,8 @@ export interface ISnapshotOptions {
 }
 
 export class SnapshotTransform extends Transform {
+    private readonly logger = new Logger(this);
+
     // materializedMap is a map that has as key the version identifier and as value the materialized quads of the member
     private materializedMap: Map<string, Array<Quad>>;
     // a map that has as key the version identifier and as a value the time of the current saved (in materializedMap)
@@ -59,7 +62,6 @@ export class SnapshotTransform extends Transform {
         })
         this.emitedMetadata = false;
 
-        // todo: add logger
     }
 
     public _transform(chunk: any, _enc: any, done: () => void) {
@@ -72,8 +74,12 @@ export class SnapshotTransform extends Transform {
         try {
             this.processMember(chunk)
         } catch (e) {
-            //todo: add proper logging
-            console.log(`Error has occurred on: ${chunk}`,'\n', e)
+            if (isMember(chunk)) {
+                this.logger.info(`Following member could not be transformed: ${chunk.id.value}`)
+            } else {
+                this.logger.info('item in stream was not a member: ' + chunk)
+            }
+            console.log(e)
         }
         done()
     }
