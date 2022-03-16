@@ -1,5 +1,5 @@
-import {memberStreamtoStore, storeAsMemberStream, storeToString, turtleStringToStore} from "../src/util/Conversion";
-import {PassThrough, Readable} from "stream";
+import {memberStreamtoStore, storeAsMemberStream, turtleStringToStore} from "../src/util/Conversion";
+import {Readable} from "stream";
 import {ISnapshotOptions, SnapshotTransform} from "../src/SnapshotTransform";
 import {extractSnapshotOptions} from "../src/util/SnapshotUtil";
 import {DCT, LDES, RDF, TREE} from "../src/util/Vocabularies";
@@ -8,7 +8,6 @@ import {dateToLiteral, extractDateFromLiteral} from "../src/util/TimestampUtil";
 import quad = DataFactory.quad;
 import namedNode = DataFactory.namedNode;
 import literal = DataFactory.literal;
-import {error} from "loglevel";
 
 
 describe("A SnapshotTransform", () => {
@@ -51,6 +50,23 @@ ex:resource1v1
         memberStream = storeAsMemberStream(store)
     })
 
+    describe("constructor", () => {
+        it("errors when no version path is given.", () => {
+            const customSnapshotOptions: ISnapshotOptions = {
+                ldesIdentifier: snapshotOptions.ldesIdentifier,
+                timestampPath: snapshotOptions.timestampPath
+            }
+            expect(() => new SnapshotTransform(customSnapshotOptions)).toThrow(Error)
+        })
+
+        it("errors when no timestamp path is given.", () => {
+            const customSnapshotOptions: ISnapshotOptions = {
+                ldesIdentifier: snapshotOptions.ldesIdentifier,
+                versionOfPath: snapshotOptions.versionOfPath
+            }
+            expect(() => new SnapshotTransform(customSnapshotOptions)).toThrow(Error)
+        })
+    })
     it("generates a quad stream for metadata", async () => {
         const snapshotTransformer = new SnapshotTransform(snapshotOptions)
         const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
@@ -62,15 +78,16 @@ ex:resource1v1
                     expect(quads).toBeInstanceOf(Array)
                     const metadataStore = new Store(quads)
                     expect(metadataStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
-                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
-                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
-                } catch (e){
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
+                } catch (e) {
                     reject(e)
                 }
             })
-            memberStreamTransformed.on('data', quads => {})
-
+            memberStreamTransformed.on('data', () => {
             })
+
+        })
         await test
     })
 

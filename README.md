@@ -2,7 +2,19 @@
 
 This package facilitates creating a **snapshot** of a **versioned** Linked Data Event Stream ([LDES](https://semiceu.github.io/LinkedDataEventStreams/)). 
 
-A snapshot is the **[version materialization](https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)** of a versioned LDES.
+## What is a snapshot
+
+A snapshot of an LDES at **time t** is an LDES where only the most recent versions until time **t** are present.
+
+This indicates that for each version, only one remains in the snapshot.
+
+One of the **benefits** of creating a snapshot is that it captures the total state of all members at time t while being **smaller in size**.
+
+A downside, however, is that by throwing away all older versions, it loses the history of that LDES.
+
+### Version materialized snapshot
+
+This package also supports to create the **[version materialization](https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)** of a snapshot.
 
 Note: This package uses [@treecg/version-materialize-rdf.js](https://github.com/TREEcg/version-materialize-rdf.js) as a basis for the version materializations.
 
@@ -22,6 +34,21 @@ However, there is a downside: This approach will only work for an LDES that can 
 The second option is to create a snapshot streamingwise using a [Transform](https://nodejs.org/api/stream.html#class-streamtransform).
 As input a stream of [members](https://github.com/TREEcg/types/blob/main/lib/Member.ts) is required. This stream is then piped through the transformer which will, when the stream stops, emit a stream of snapshot members (which are version materialized).
 While working with streams might be a little more difficult, it allows to create a snapshot of a bigger LDESs as an LDES does not have to be loaded in memory. 
+
+### 🔧 Configuring the snapshot
+
+Configuration for creating a snapshot is done by giving an `options` object (which has the [`ISnapshotOptions`](https://github.com/woutslabbinck/LDES-Snapshot/blob/main/src/SnapshotTransform.ts) interface ).
+
+This object has the following parameters:
+
+| parameter name       | default value                 | description                                                  |
+| -------------------- | ----------------------------- | ------------------------------------------------------------ |
+| `date`               | new Date()                    | A JavaScript [Date](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date) object; the snapshot will be created until this timestamp |
+| `snapshotIdentifier` | `http://example.org/snapshot` | The identifier of the snapshot                               |
+| `ldesIdentifier`     |                               | The identifier of the LDES of which you want to create a snapshot from (always **required**) |
+| `versionOfPath`      |                               | The `ldes:versionOfPath` of the LDES (which is **required** in the Transform) |
+| `timeStampPath`      |                               | The `ldes:timestampPath` of the LDES (which is **required** in the Transform) |
+| `materialized`       | false                         | When true, the snapshot will be materialized                 |
 
 ## Creating a snapshot using an N3 Store
 
@@ -65,10 +92,9 @@ const store = await storeStream(quadStream);
 const snapshot = new Snapshot(store);
 // create the snapshot at a given time
 const snapshotCreated = await snapshot.create({
-        date: new Date("2020-10-05T12:00:00Z"),
-        ldesIdentifier: "http://example.org/ES1",
-        versionOfPath: "http://purl.org/dc/terms/isVersionOf",
-        timestampPath: "http://purl.org/dc/terms/created",
+    date: new Date("2020-10-05T12:00:00Z"),
+    ldesIdentifier: "http://example.org/ES1",
+    materialization: true
 })
 ```
 
@@ -127,12 +153,13 @@ const memberStream = new Readable({
 })
 
 const snapshotOptions = {
-            date: new Date(),
-            ldesIdentifier: "http://example.org/ES1",
-            snapshotIdentifier: "http://example.org/snapshot",
-            versionOfPath: "http://purl.org/dc/terms/isVersionOf",
-            timestampPath: "http://purl.org/dc/terms/created",
-        }
+    date: new Date(),
+    ldesIdentifier: "http://example.org/ES1",
+    snapshotIdentifier: "http://example.org/snapshot",
+    versionOfPath: "http://purl.org/dc/terms/isVersionOf",
+    timestampPath: "http://purl.org/dc/terms/created",
+    materializations: true
+}
 const snapshotTransformer = new SnapshotTransform(snapshotOptions)
 const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
 
@@ -170,8 +197,6 @@ member: A
 
 done
 ```
-
-
 
 ## Feedback and questions
 

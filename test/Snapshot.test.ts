@@ -1,7 +1,6 @@
-import {storeToString, turtleStringToStore} from "../src/util/Conversion";
+import {turtleStringToStore} from "../src/util/Conversion";
 import {Snapshot} from "../src/Snapshot";
 import {DataFactory, Literal} from "n3";
-import namedNode = DataFactory.namedNode;
 import {ISnapshotOptions} from "../src/SnapshotTransform";
 import {DCT, LDES, RDF, TREE} from "../src/util/Vocabularies";
 import {extractDateFromLiteral} from "../src/util/TimestampUtil";
@@ -46,8 +45,8 @@ ex:resource1v1
         }
     })
     describe('materialized', () => {
-        beforeEach(  () => {
-            snapshotOptions = {...snapshotOptions, materialized:true}
+        beforeEach(() => {
+            snapshotOptions = {...snapshotOptions, materialized: true}
         })
 
         it('is generated as defined by the spec on an LDES', async () => {
@@ -175,8 +174,8 @@ ex:ES1 a ldes:EventStream;
         const versionObjectIdentifier = 'http://example.org/resource1v1'
 
         expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
         expect(snapshotStore.getQuads(snapshotIdentifier, TREE.member, versionObjectIdentifier, null).length).toBe(1)
 
         expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.isVersionOf, 'http://example.org/resource1', null).length).toBe(1)
@@ -190,20 +189,18 @@ ex:ES1 a ldes:EventStream;
         const snapshotStore = await snapshotExample.create(snapshotOptions)
 
         expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
     })
 
-    it("generated using default values for date and snapshotIdentifier", async () => {
+    it("generated using default values for date, snapshotIdentifier, timestampPath and versionOfPath", async () => {
         const snapshotStore = await snapshotExample.create({
-            ldesIdentifier: snapshotOptions.ldesIdentifier,
-            timestampPath: snapshotOptions.timestampPath,
-            versionOfPath: snapshotOptions.versionOfPath
+            ldesIdentifier: snapshotOptions.ldesIdentifier
         })
         const snapshotIdentifier = 'http://example.org/snapshot'
 
         expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
     })
 })

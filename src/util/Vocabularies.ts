@@ -12,19 +12,19 @@ export type Namespace<TKey extends any[], TValue> =
  * and exports the given local names as properties on the returned object.
  */
 export function createNamespace<TKey extends string, TValue>(
-  baseUri: string,
-  toValue: (expanded: string) => TValue,
-  ...localNames: TKey[]
+    baseUri: string,
+    toValue: (expanded: string) => TValue,
+    ...localNames: TKey[]
 ):
     Namespace<typeof localNames, TValue> {
-  const expanded: Namespace<typeof localNames, TValue> = {} as any;
-  // Expose the main namespace
-  expanded.namespace = toValue(baseUri);
-  // Expose the listed local names as properties
-  for (const localName of localNames) {
-    (expanded as RecordOf<TKey[], TValue>)[localName] = toValue(`${baseUri}${localName}`);
-  }
-  return expanded;
+    const expanded: Namespace<typeof localNames, TValue> = {} as any;
+    // Expose the main namespace
+    expanded.namespace = toValue(baseUri);
+    // Expose the listed local names as properties
+    for (const localName of localNames) {
+        (expanded as RecordOf<TKey[], TValue>)[localName] = toValue(`${baseUri}${localName}`);
+    }
+    return expanded;
 }
 
 /**
@@ -33,7 +33,7 @@ export function createNamespace<TKey extends string, TValue>(
  */
 export function createUriNamespace<T extends string>(baseUri: string, ...localNames: T[]):
     Namespace<typeof localNames, string> {
-  return createNamespace(baseUri, (expanded): string => expanded, ...localNames);
+    return createNamespace(baseUri, (expanded): string => expanded, ...localNames);
 }
 
 /**
@@ -42,7 +42,7 @@ export function createUriNamespace<T extends string>(baseUri: string, ...localNa
  */
 export function createTermNamespace<T extends string>(baseUri: string, ...localNames: T[]):
     Namespace<typeof localNames, NamedNode> {
-  return createNamespace(baseUri, namedNode, ...localNames);
+    return createNamespace(baseUri, namedNode, ...localNames);
 }
 
 /**
@@ -52,85 +52,85 @@ export function createTermNamespace<T extends string>(baseUri: string, ...localN
  */
 export function createUriAndTermNamespace<T extends string>(baseUri: string, ...localNames: T[]):
     Namespace<typeof localNames, string> & { terms: Namespace<typeof localNames, NamedNode> } {
-  return Object.assign(createUriNamespace(baseUri, ...localNames),
-    {terms: createTermNamespace(baseUri, ...localNames)});
+    return Object.assign(createUriNamespace(baseUri, ...localNames),
+        {terms: createTermNamespace(baseUri, ...localNames)});
 }
 
 export const AS = createUriAndTermNamespace('https://www.w3.org/ns/activitystreams#',
-  'Announce',
-  'Person',
-  'Arrive',
-  'Link',
-  'Add',
-  'actor',
-  'object',
-  'location',
-  'href',
-  'name',
-  'url');
+    'Announce',
+    'Person',
+    'Arrive',
+    'Link',
+    'Add',
+    'actor',
+    'object',
+    'location',
+    'href',
+    'name',
+    'url');
 
 export const DCAT = createUriAndTermNamespace('http://www.w3.org/ns/dcat#',
-  'Dataset',
-  'DataService',
-  'servesDataset',
-  'contactPoint',
-  'endpointURL');
+    'Dataset',
+    'DataService',
+    'servesDataset',
+    'contactPoint',
+    'endpointURL');
 
 export const DCT = createUriAndTermNamespace('http://purl.org/dc/terms/',
-  'conformsTo',
-  'creator',
-  'created',
-  'description',
-  'identifier',
-  'issued',
-  'isVersionOf',
-  'license',
-  'modified',
-  'subject',
-  'hasVersion',
-  'title');
+    'conformsTo',
+    'creator',
+    'created',
+    'description',
+    'identifier',
+    'issued',
+    'isVersionOf',
+    'license',
+    'modified',
+    'subject',
+    'hasVersion',
+    'title');
 
 export const LDES = createUriAndTermNamespace('https://w3id.org/ldes#',
-  'EventStream',
-  'BucketizerConfiguration',
-  'configuration',
-  'pageSize',
-  'bucketizer',
-  'versionOfPath',
-  'timestampPath',
-  'versionMaterializationUntil',
-  'versionMaterializationOf');
+    'EventStream',
+    'BucketizerConfiguration',
+    'configuration',
+    'pageSize',
+    'bucketizer',
+    'versionOfPath',
+    'timestampPath',
+    'versionMaterializationUntil',
+    'versionMaterializationOf');
 
 export const LDP = createUriAndTermNamespace('http://www.w3.org/ns/ldp#',
-  'contains',
-  'BasicContainer',
-  'Container',
-  'Resource',
-  'constrainedBy',
-  'inbox');
+    'contains',
+    'BasicContainer',
+    'Container',
+    'Resource',
+    'constrainedBy',
+    'inbox');
 
 export const SH = createUriAndTermNamespace('http://www.w3.org/ns/shacl#',
-  'targetClass',
-  'or');
+    'targetClass',
+    'or');
 
 export const RDF = createUriAndTermNamespace('http://www.w3.org/1999/02/22-rdf-syntax-ns#',
-  'type');
+    'type');
 
 export const TREE = createUriAndTermNamespace('https://w3id.org/tree#',
-  'Node',
-  'Collection',
-  'GreaterThanOrEqualToRelation',
-  'member',
-  'node',
-  'relation',
-  'path',
-  'shape',
-  'value',
-  'view');
+    'Node',
+    'Collection',
+    'GreaterThanOrEqualToRelation',
+    'member',
+    'node',
+    'relation',
+    'path',
+    'shape',
+    'value',
+    'view');
 
 export const VOID = createUriAndTermNamespace('http://rdfs.org/ns/void#',
-  'subset');
+    'subset');
 
 export const XSD = createUriAndTermNamespace('http://www.w3.org/2001/XMLSchema#',
-  'positiveInteger',
-  'dateTime');
+    'positiveInteger',
+    'dateTime');

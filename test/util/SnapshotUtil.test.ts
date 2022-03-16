@@ -1,16 +1,18 @@
 import {turtleStringToStore} from "../../src/util/Conversion";
 import {
     createSnapshotMetadata,
-    extractSnapshotOptions, isMember,
+    extractSnapshotOptions,
+    isMember,
     retrieveTimestampProperty,
     retrieveVersionOfProperty
 } from "../../src/util/SnapshotUtil";
 import {DCT, LDES, RDF, TREE} from "../../src/util/Vocabularies";
 import {DataFactory, Literal, Store} from "n3";
-import namedNode = DataFactory.namedNode;
 import {extractDateFromLiteral} from "../../src/util/TimestampUtil";
+import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import literal = DataFactory.literal;
+import {ISnapshotOptions} from "../../src/SnapshotTransform";
 
 describe("A SnapshotUtil", () => {
     const ldesIdentifier = 'http://example.org/ES'
@@ -128,6 +130,26 @@ ex:ES a ldes:EventStream;
             })
         })
         describe("not materialized", () => {
+            it("errors when no version path is given.", () => {
+                const snapshotOptions = extractSnapshotOptions(store, ldesIdentifier)
+
+                const customSnapshotOptions: ISnapshotOptions = {
+                    ldesIdentifier: snapshotOptions.ldesIdentifier,
+                    timestampPath: snapshotOptions.timestampPath
+                }
+                expect(() => createSnapshotMetadata(customSnapshotOptions)).toThrow(Error)
+            })
+
+            it("errors when no timestamp path is given.", () => {
+                const snapshotOptions = extractSnapshotOptions(store, ldesIdentifier)
+
+                const customSnapshotOptions: ISnapshotOptions = {
+                    ldesIdentifier: snapshotOptions.ldesIdentifier,
+                    versionOfPath: snapshotOptions.versionOfPath
+                }
+                expect(() => createSnapshotMetadata(customSnapshotOptions)).toThrow(Error)
+            })
+
             it("creates a store that contains the metadata triples of a snapshot with default settings", () => {
                 const snapshotOptions = extractSnapshotOptions(store, ldesIdentifier)
 
@@ -135,8 +157,8 @@ ex:ES a ldes:EventStream;
                 const snapshotIdentifier = `${ldesIdentifier}Snapshot`
 
                 expect(snapshotMetadataStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
-                expect(snapshotMetadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
-                expect(snapshotMetadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
+                expect(snapshotMetadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
+                expect(snapshotMetadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
             })
         })
     })
@@ -173,6 +195,13 @@ ex:ES a ldes:EventStream;
         })
         it("returns false when quads is an array of strings.", () => {
             member.quads = ["Something"]
+            expect(isMember(member)).toBeFalsy()
+
+        })
+        it("returns false when quads is an empty array of strings.", () => {
+            member.quads = []
+            expect(isMember(member)).toBeFalsy()
+
         })
 
     })

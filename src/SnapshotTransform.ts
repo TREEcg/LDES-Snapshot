@@ -11,16 +11,16 @@ import {Quad} from "@rdfjs/types";
 import {extractDateFromLiteral} from "./util/TimestampUtil";
 import {materialize} from "@treecg/version-materialize-rdf.js";
 import {createSnapshotMetadata, isMember} from "./util/SnapshotUtil";
+import {Logger} from "./logging/Logger";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
-import {Logger} from "./logging/Logger";
 
 export interface ISnapshotOptions {
     date?: Date;
     snapshotIdentifier?: string;
     ldesIdentifier: string;
-    versionOfPath: string;
-    timestampPath: string;
+    versionOfPath?: string;
+    timestampPath?: string;
     materialized?: boolean;
 }
 
@@ -45,6 +45,8 @@ export class SnapshotTransform extends Transform {
 
     public constructor(options: ISnapshotOptions) {
         super({objectMode: true, highWaterMark: 1000});
+        if (!options.versionOfPath) throw new Error("No versionOfPath was given in options")
+        if (!options.timestampPath) throw new Error("No timestampPath was given in options")
         this.transformedMap = new Map<string, Array<Quad>>();
         this.versionTimeMap = new Map<string, Date>();
 

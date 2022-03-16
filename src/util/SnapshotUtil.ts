@@ -30,10 +30,13 @@ export function createSnapshotMetadata(options: ISnapshotOptions): Store {
         store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(options.ldesIdentifier)))
         store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(options.date)))
     } else {
+        if (!options.versionOfPath) throw new Error("No versionOfPath was given in options")
+        if (!options.timestampPath) throw new Error("No timestampPath was given in options")
         store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(LDES.EventStream)))
         store.add(quad(snapshotIdentifier, namedNode(LDES.versionOfPath), namedNode(options.versionOfPath)))
         store.add(quad(snapshotIdentifier, namedNode(LDES.timestampPath), namedNode(options.timestampPath)))
-        //todo: maybe add a reference to the original LDES? e.g. predicate: IsSnapshot
+        // todo: maybe add a reference to the original LDES? e.g. predicate: ldes:isSnapshotOf
+        //  on top of that: also add the time of the ldes. e.g. predicate: ldes:snapshotAt
     }
     return store
 }

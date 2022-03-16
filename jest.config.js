@@ -12,7 +12,7 @@ module.exports = {
         },
     },
     collectCoverage: true,
-    coverageReporters: [ 'text', 'lcov' ],
+    coverageReporters: ['text', 'lcov'],
     coveragePathIgnorePatterns: [
         '/dist/',
         '/node_modules/',

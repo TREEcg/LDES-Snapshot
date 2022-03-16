@@ -37,7 +37,7 @@ export function timestampToLiteral(timestamp: number): Literal {
  * @param date
  * @returns {Literal}
  */
-export function dateToLiteral(date: Date): Literal{
+export function dateToLiteral(date: Date): Literal {
     return timestampToLiteral(date.getTime())
 }
 

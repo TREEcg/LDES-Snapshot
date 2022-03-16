@@ -1,5 +1,5 @@
 import {Store} from "n3";
-import {createSnapshotMetadata} from "./util/SnapshotUtil";
+import {createSnapshotMetadata, retrieveTimestampProperty, retrieveVersionOfProperty} from "./util/SnapshotUtil";
 import {ISnapshotOptions, SnapshotTransform} from "./SnapshotTransform";
 import {memberStreamtoStore, storeAsMemberStream} from "./util/Conversion";
 
@@ -27,14 +27,15 @@ export class Snapshot {
     async create(options: ISnapshotOptions): Promise<Store> {
         options.date = options.date ? options.date : new Date();
         options.snapshotIdentifier = options.snapshotIdentifier ? options.snapshotIdentifier : 'http://example.org/snapshot';
-
+        options.timestampPath = options.timestampPath ? options.timestampPath: retrieveTimestampProperty(this.baseStore, options.ldesIdentifier)
+        options.versionOfPath = options.versionOfPath ? options.versionOfPath: retrieveVersionOfProperty(this.baseStore, options.ldesIdentifier)
 
         const snapshotStore = createSnapshotMetadata(options)
         const memberStream = storeAsMemberStream(this.baseStore)
         const snapshotTransformer = new SnapshotTransform(options);
         const transformationOutput = memberStream.pipe(snapshotTransformer)
         const transformedStore = await memberStreamtoStore(transformationOutput, options.snapshotIdentifier)
-        snapshotStore.addQuads(transformedStore.getQuads(null,null,null,null))
+        snapshotStore.addQuads(transformedStore.getQuads(null, null, null, null))
 
         return snapshotStore
     }
