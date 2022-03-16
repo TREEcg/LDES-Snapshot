@@ -22,10 +22,6 @@ export interface ISnapshotOptions {
     timestampPath: string;
 }
 
-// export interface MemberTransformStream<M extends Member> extends EventEmitter {
-//     _transform(chunck : Member, enc:any, done:any): void;
-// }
-
 export class SnapshotTransform extends Transform {
     // materializedMap is a map that has as key the version identifier and as value the materialized quads of the member
     private materializedMap: Map<string, Array<Quad>>;
@@ -77,7 +73,7 @@ export class SnapshotTransform extends Transform {
             this.processMember(chunk)
         } catch (e) {
             //todo: add proper logging
-            console.log(`Error has occurred on: ${chunk.id.value}`, e)
+            console.log(`Error has occurred on: ${chunk}`,'\n', e)
         }
         done()
     }
@@ -139,7 +135,7 @@ export class SnapshotTransform extends Transform {
         const store = new Store(member.quads)
         const dateTimeLiterals = store.getObjects(member.id, namedNode(this.timestampPath), null)
         if (dateTimeLiterals.length !== 1) {
-            throw Error(`Found ${dateTimeLiterals.length} timestamp paths for ${member.id.value}, only expected one.`)
+            throw Error(`Found ${dateTimeLiterals.length} dateTime literals following the timestamp path of ${member.id.value}; expected one such literal.`)
         }
         return extractDateFromLiteral(dateTimeLiterals[0] as Literal)
     }
@@ -149,7 +145,7 @@ export class SnapshotTransform extends Transform {
         const store = new Store(member.quads)
         const versionIds = store.getObjects(member.id, namedNode(this.versionOfPath), null)
         if (versionIds.length !== 1) {
-            throw Error(`Found ${versionIds.length} version paths for ${member.id.value}, only expected one.`)
+            throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
         }
         return versionIds[0].value
     }

@@ -1,4 +1,4 @@
-import {DataFactory, Store} from "n3";
+import {Store} from "n3";
 import {createSnapshotMetadata} from "./util/SnapshotUtil";
 import {ISnapshotOptions, SnapshotTransform} from "./SnapshotTransform";
 import {memberStreamtoStore, storeAsMemberStream} from "./util/Conversion";

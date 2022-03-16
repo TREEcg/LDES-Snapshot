@@ -170,4 +170,16 @@ ex:ES1 a ldes:EventStream;
             expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,snapshotOptions.ldesIdentifier,null).length).toBe(1)
             expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
         })
+
+    it("generated using default values for date and snapshotIdentifier", async () => {
+        const snapshotStore =  await snapshotExample.create({
+            ldesIdentifier: snapshotOptions.ldesIdentifier,
+            timestampPath: snapshotOptions.timestampPath,
+            versionOfPath: snapshotOptions.versionOfPath
+        })
+        const snapshotIdentifier = 'http://example.org/snapshot'
+        expect(snapshotStore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,snapshotOptions.ldesIdentifier,null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
+    })
 })
