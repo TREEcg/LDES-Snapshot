@@ -21,15 +21,16 @@ export interface ISnapshotOptions {
     ldesIdentifier: string;
     versionOfPath: string;
     timestampPath: string;
+    materialized?: boolean;
 }
 
 export class SnapshotTransform extends Transform {
     private readonly logger = new Logger(this);
 
-    // materializedMap is a map that has as key the version identifier and as value the materialized quads of the member
-    private materializedMap: Map<string, Array<Quad>>;
-    // a map that has as key the version identifier and as a value the time of the current saved (in materializedMap)
-    // materialized version of that version object
+    // transformedMap is a map that has as key the version identifier and as value the transformed quads of the member
+    private transformedMap: Map<string, Array<Quad>>;
+    // a map that has as key the version identifier and as a value the time of the current saved (in transformedMap)
+    // transformed version of that version object
     private versionTimeMap: Map<string, Date>;
 
     private readonly date: Date;
@@ -37,13 +38,14 @@ export class SnapshotTransform extends Transform {
     private readonly ldesIdentifier: string;
     private readonly versionOfPath: string;
     private readonly timestampPath: string;
+    private readonly materialized: boolean;
 
     private emitedMetadata: boolean;
     private metadataStore: Store;
 
     public constructor(options: ISnapshotOptions) {
         super({objectMode: true, highWaterMark: 1000});
-        this.materializedMap = new Map<string, Array<Quad>>();
+        this.transformedMap = new Map<string, Array<Quad>>();
         this.versionTimeMap = new Map<string, Date>();
 
         this.date = options.date ? options.date : new Date();
@@ -51,6 +53,7 @@ export class SnapshotTransform extends Transform {
         this.ldesIdentifier = options.ldesIdentifier;
         this.versionOfPath = options.versionOfPath;
         this.timestampPath = options.timestampPath;
+        this.materialized = options.materialized ? options.materialized : false;
 
         // create metadata for the snapshot
         this.metadataStore = createSnapshotMetadata({
@@ -58,7 +61,8 @@ export class SnapshotTransform extends Transform {
             snapshotIdentifier: this.snapshotIdentifier,
             ldesIdentifier: this.ldesIdentifier,
             versionOfPath: this.versionOfPath,
-            timestampPath: this.timestampPath
+            timestampPath: this.timestampPath,
+            materialized: this.materialized
         })
         this.emitedMetadata = false;
 
@@ -88,8 +92,11 @@ export class SnapshotTransform extends Transform {
     _flush() {
         // called at the end
 
-        this.materializedMap.forEach((value, key) => {
-            this.push({id: namedNode(key), quads: value})
+        this.transformedMap.forEach((value, key) => {
+            //Note: can be wrong if not all subjects of the quads are the same id
+            // -> could be solved in a more thorough isMember test before processing the members
+            this.push({id: value[0].subject, quads: value})
+
         })
         this.push(null)
     }
@@ -97,43 +104,47 @@ export class SnapshotTransform extends Transform {
     private processMember(member: Member) {
         const versionObjectID = this.extractVersionId(member)
 
-        if (this.materializedMap.has(versionObjectID)) {
+        if (this.transformedMap.has(versionObjectID)) {
             const versionPresentTime = this.versionTimeMap.get(versionObjectID)!
             const currentTime = this.extractDate(member)
             // dateTime must be more recent than the one already present and not more recent than the snapshotDate
             if (currentTime.getTime() <= this.date.getTime() && versionPresentTime.getTime() < currentTime.getTime()) {
-                this.materializedMap.set(versionObjectID, this.materialize(member))
+                this.transformedMap.set(versionObjectID, this.transform(member))
                 this.versionTimeMap.set(versionObjectID, currentTime)
             }
         } else {
             //first time member
-            const materialized = this.materialize(member)
+            const materialized = this.transform(member)
             const date = this.extractDate(member)
 
             if (date.getTime() <= this.date.getTime()) {
-                this.materializedMap.set(versionObjectID, materialized)
+                this.transformedMap.set(versionObjectID, materialized)
                 this.versionTimeMap.set(versionObjectID, date)
             }
         }
     }
 
-    private materialize(member: Member) {
-        const materializedQuads = materialize(member.quads, {
-            versionOfProperty: namedNode(this.versionOfPath),
-            timestampProperty: namedNode(this.timestampPath)
-        });
-        // code below here is to transform quads to triples
-        const materializedTriples: Quad[] = []
+    private transform(member: Member): Quad[] {
+        const transformedTriples: Quad[] = []
 
-        for (const q of materializedQuads) {
-            if (q.predicate.value === this.timestampPath) {
-                // have version object id as indication for the update
-                materializedTriples.push(quad(namedNode(this.extractVersionId(member)), q.predicate, q.object))
-            } else {
-                materializedTriples.push(quad(q.subject, q.predicate, q.object))
+        if (this.materialized) {
+            const materializedQuads = materialize(member.quads, {
+                versionOfProperty: namedNode(this.versionOfPath),
+                timestampProperty: namedNode(this.timestampPath)
+            });
+            // code below here is to transform quads to triples
+            for (const q of materializedQuads) {
+                if (q.predicate.value === this.timestampPath) {
+                    // have version object id as indication for the update
+                    transformedTriples.push(quad(namedNode(this.extractVersionId(member)), q.predicate, q.object))
+                } else {
+                    transformedTriples.push(quad(q.subject, q.predicate, q.object))
+                }
             }
+        } else {
+            transformedTriples.push(...member.quads)
         }
-        return materializedTriples
+        return transformedTriples
     }
 
 // note: only handles xsd:dateTime

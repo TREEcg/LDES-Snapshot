@@ -1,14 +1,15 @@
 import {memberStreamtoStore, storeAsMemberStream, storeToString, turtleStringToStore} from "../src/util/Conversion";
-import {Readable} from "stream";
+import {PassThrough, Readable} from "stream";
 import {ISnapshotOptions, SnapshotTransform} from "../src/SnapshotTransform";
 import {extractSnapshotOptions} from "../src/util/SnapshotUtil";
 import {DCT, LDES, RDF, TREE} from "../src/util/Vocabularies";
 import {DataFactory, Literal, Store} from "n3";
-import * as RDF2 from "@rdfjs/types";
 import {dateToLiteral, extractDateFromLiteral} from "../src/util/TimestampUtil";
 import quad = DataFactory.quad;
 import namedNode = DataFactory.namedNode;
 import literal = DataFactory.literal;
+import {error} from "loglevel";
+
 
 describe("A SnapshotTransform", () => {
     const ldesIdentifier = 'http://example.org/ES'
@@ -50,50 +51,68 @@ ex:resource1v1
         memberStream = storeAsMemberStream(store)
     })
 
-    it("generates a quad stream for metadata", () => {
+    it("generates a quad stream for metadata", async () => {
         const snapshotTransformer = new SnapshotTransform(snapshotOptions)
         const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
 
-        memberStreamTransformed.on('metadata', quads => {
-            expect(quads).toBeInstanceOf(Array)
-            const metadataStore = new Store(quads)
+        const test = new Promise((resolve, reject) => {
+            memberStreamTransformed.on('end', resolve).on('error', reject)
+            memberStreamTransformed.on('metadata', quads => {
+                try {
+                    expect(quads).toBeInstanceOf(Array)
+                    const metadataStore = new Store(quads)
+                    expect(metadataStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+                } catch (e){
+                    reject(e)
+                }
+            })
+            memberStreamTransformed.on('data', quads => {})
 
-            expect(metadataStore.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
-            expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
-            expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
-        })
+            })
+        await test
     })
 
-    it("generates a data stream of members", () => {
+    it("generates a data stream of members", async () => {
         const snapshotTransformer = new SnapshotTransform(snapshotOptions)
         const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
+        const test = new Promise((resolve, reject) => {
+            memberStreamTransformed.on('end', resolve).on('error', reject)
+            memberStreamTransformed.on('data', member => {
+                try {
+                    expect(member.quads).toBeInstanceOf(Array)
 
-        memberStreamTransformed.on('data', member => {
-            expect(member.quads).toBeInstanceOf(Array)
+                    expect(member.id.value).toBe('http://example.org/resource1v1')
+                    const memberStore = new Store(member.quads)
 
-            expect(member.id.value).toBe('http://example.org/resource1')
-            const memberStore = new Store(member.quads)
+                    expect(memberStore.getQuads(member.id.value, DCT.isVersionOf, 'http://example.org/resource1', null).length).toBe(1)
+                    expect(memberStore.getQuads(member.id.value, DCT.issued, null, null).length).toBe(1)
+                    expect(memberStore.getQuads(member.id.value, DCT.title, null, null).length).toBe(1)
 
-            expect(memberStore.getQuads(member.id.value, DCT.hasVersion, 'http://example.org/resource1v1', null).length).toBe(1)
-            expect(memberStore.getQuads(member.id.value, DCT.issued, null, null).length).toBe(1)
-            expect(memberStore.getQuads(member.id.value, DCT.title, null, null).length).toBe(1)
+                    expect(memberStore.getObjects(member.id.value, DCT.title, null)[0].value).toStrictEqual('Title has been updated once')
+                    const dateLiteral = memberStore.getObjects(member.id.value, DCT.issued, null)[0] as Literal
+                    expect(extractDateFromLiteral(dateLiteral)).toStrictEqual(new Date("2021-12-15T12:00:00.000Z"))
+                } catch (e) {
+                    reject(e)
+                }
+            })
 
-            expect(memberStore.getObjects(member.id.value, DCT.title, null)[0].value).toStrictEqual('Title has been updated once')
-            const dateLiteral = memberStore.getObjects(member.id.value, DCT.issued, null)[0] as Literal
-            expect(extractDateFromLiteral(dateLiteral)).toStrictEqual(new Date("2021-12-15T12:00:00.000Z"))
         })
+        await test
     })
+
     it("makes it possible the stream of snapshot members to a store", async () => {
         const snapshotTransformer = new SnapshotTransform(snapshotOptions)
         const memberStreamTransformed = memberStream.pipe(snapshotTransformer)
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)
-        const resourceIdentifier = 'http://example.org/resource1'
+        const versionObjectIdentifier = 'http://example.org/resource1v1'
 
-        expect(transformedStore.getQuads(resourceIdentifier, DCT.hasVersion, 'http://example.org/resource1v1', null).length).toBe(1)
-        expect(transformedStore.getQuads(resourceIdentifier, DCT.issued, null, null).length).toBe(1)
-        expect(transformedStore.getQuads(resourceIdentifier, DCT.title, null, null).length).toBe(1)
+        expect(transformedStore.getQuads(versionObjectIdentifier, DCT.isVersionOf, 'http://example.org/resource1', null).length).toBe(1)
+        expect(transformedStore.getQuads(versionObjectIdentifier, DCT.issued, null, null).length).toBe(1)
+        expect(transformedStore.getQuads(versionObjectIdentifier, DCT.title, null, null).length).toBe(1)
 
-        expect(transformedStore.getQuads(snapshotIdentifier, TREE.member, resourceIdentifier, null).length).toBe(1)
+        expect(transformedStore.getQuads(snapshotIdentifier, TREE.member, versionObjectIdentifier, null).length).toBe(1)
     })
 
     it("ignores data in the stream that are not members.", async () => {
@@ -119,7 +138,7 @@ ex:resource1v1
         // read whole output of the transformed member stream
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)
 
-        expect(transformedStore.getQuads(resourceIdentifier,null,null,null).length).toBe(0)
+        expect(transformedStore.getQuads(resourceIdentifier, null, null, null).length).toBe(0)
     })
 
     it("ignores members that have no timestamp.", async () => {
@@ -136,7 +155,7 @@ ex:resource1v1
         // read whole output of the transformed member stream
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)
 
-        expect(transformedStore.getQuads(resourceIdentifier,null,null,null).length).toBe(0)
+        expect(transformedStore.getQuads(resourceIdentifier, null, null, null).length).toBe(0)
     })
 
     it("generated using default values for date and snapshotIdentifier", async () => {
@@ -149,6 +168,6 @@ ex:resource1v1
         const snapshotIdentifier = 'http://example.org/snapshot'
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)
 
-        expect(transformedStore.getQuads('http://example.org/resource1',null,null,null).length).toBe(3)
+        expect(transformedStore.getQuads('http://example.org/resource1v1', null, null, null).length).toBe(3)
     })
 })

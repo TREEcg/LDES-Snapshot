@@ -24,9 +24,17 @@ export function createSnapshotMetadata(options: ISnapshotOptions): Store {
 
     const store = new Store()
     let snapshotIdentifier: NamedNode = namedNode(options.snapshotIdentifier)
-    store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(TREE.Collection)))
-    store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(options.ldesIdentifier)))
-    store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(options.date)))
+
+    if (options.materialized) {
+        store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(TREE.Collection)))
+        store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationOf), namedNode(options.ldesIdentifier)))
+        store.add(quad(snapshotIdentifier, namedNode(LDES.versionMaterializationUntil), dateToLiteral(options.date)))
+    } else {
+        store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(LDES.EventStream)))
+        store.add(quad(snapshotIdentifier, namedNode(LDES.versionOfPath), namedNode(options.versionOfPath)))
+        store.add(quad(snapshotIdentifier, namedNode(LDES.timestampPath), namedNode(options.timestampPath)))
+        //todo: maybe add a reference to the original LDES? e.g. predicate: IsSnapshot
+    }
     return store
 }
 

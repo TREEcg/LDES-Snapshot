@@ -30,7 +30,7 @@ ex:resource1v1
     dct:title "Title has been updated once".
 `
     let snapshotExample: Snapshot
-    let snapshotOptions :ISnapshotOptions
+    let snapshotOptions: ISnapshotOptions
 
     beforeAll(async () => {
         const store = await turtleStringToStore(ldesExample)
@@ -45,20 +45,25 @@ ex:resource1v1
             versionOfPath: DCT.isVersionOf
         }
     })
+    describe('materialized', () => {
+        beforeEach(  () => {
+            snapshotOptions = {...snapshotOptions, materialized:true}
+        })
+
         it('is generated as defined by the spec on an LDES', async () => {
             const snapshotStore = await snapshotExample.create(snapshotOptions)
             const snapshotIdentifier = snapshotOptions.snapshotIdentifier!
             const ldesIdentifier = snapshotOptions.ldesIdentifier
             const versionObjectIdentifier = 'http://example.org/resource1'
 
-            expect(snapshotStore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,TREE.member,versionObjectIdentifier,null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, TREE.member, versionObjectIdentifier, null).length).toBe(1)
 
-            expect(snapshotStore.getQuads(versionObjectIdentifier,DCT.hasVersion,'http://example.org/resource1v1',null).length).toBe(1)
-            expect(snapshotStore.getQuads(versionObjectIdentifier,DCT.issued,null,null).length).toBe(1)
-            expect(snapshotStore.getQuads(versionObjectIdentifier,DCT.title,null,null).length).toBe(1)
+            expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.hasVersion, 'http://example.org/resource1v1', null).length).toBe(1)
+            expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.issued, null, null).length).toBe(1)
+            expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.title, null, null).length).toBe(1)
         })
 
         it('a snapshot as defined by the spec on an LDES with blank node members', async () => {
@@ -95,13 +100,13 @@ ex:ES1 a ldes:EventStream;
             const ldesIdentifier = snapshotOptions.ldesIdentifier
             const versionObjectIdentifier = 'A'
 
-            expect(snapshotStore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,TREE.member,versionObjectIdentifier,null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
+            expect(snapshotStore.getQuads(snapshotIdentifier, TREE.member, versionObjectIdentifier, null).length).toBe(1)
 
-            expect(snapshotStore.getQuads(versionObjectIdentifier,DCT.hasVersion,null,null).length).toBe(1)
-            expect(snapshotStore.getQuads(versionObjectIdentifier,DCT.created,null,null).length).toBe(1)
+            expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.hasVersion, null, null).length).toBe(1)
+            expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.created, null, null).length).toBe(1)
         })
         it('a snapshot with correct members based on date', async () => {
             // Date before the first member
@@ -113,12 +118,12 @@ ex:ES1 a ldes:EventStream;
             const ldesIdentifier = snapshotOptions.ldesIdentifier
             const versionObjectIdentifier = 'http://example.org/resource1'
 
-            expect(snapshotStoreBefore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStoreBefore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStoreBefore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-            expect(snapshotStoreBefore.getQuads(snapshotIdentifier,TREE.member,null,null).length).toBe(0)
+            expect(snapshotStoreBefore.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
+            expect(snapshotStoreBefore.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
+            expect(snapshotStoreBefore.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
+            expect(snapshotStoreBefore.getQuads(snapshotIdentifier, TREE.member, null, null).length).toBe(0)
 
-            const dateLiteralBefore = snapshotStoreBefore.getObjects(snapshotIdentifier,LDES.versionMaterializationUntil,null)[0] as Literal
+            const dateLiteralBefore = snapshotStoreBefore.getObjects(snapshotIdentifier, LDES.versionMaterializationUntil, null)[0] as Literal
             expect(extractDateFromLiteral(dateLiteralBefore)).toStrictEqual(dateBefore)
 
             // date exact at first member added to LDES
@@ -127,12 +132,12 @@ ex:ES1 a ldes:EventStream;
 
             const snapshotStoreExactFirst = await snapshotExample.create(snapshotOptions)
 
-            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier,TREE.member,null,null).length).toBe(1)
+            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
+            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
+            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
+            expect(snapshotStoreExactFirst.getQuads(snapshotIdentifier, TREE.member, null, null).length).toBe(1)
 
-            const dateLiteralExactFirst = snapshotStoreExactFirst.getObjects(snapshotIdentifier,LDES.versionMaterializationUntil,null)[0] as Literal
+            const dateLiteralExactFirst = snapshotStoreExactFirst.getObjects(snapshotIdentifier, LDES.versionMaterializationUntil, null)[0] as Literal
             expect(extractDateFromLiteral(dateLiteralExactFirst)).toStrictEqual(dateExactFirst)
             expect(snapshotStoreExactFirst.getObjects(versionObjectIdentifier, DCT.title, null)[0].value).toStrictEqual('First version of the title')
 
@@ -140,7 +145,7 @@ ex:ES1 a ldes:EventStream;
             const dateAfterFirst = new Date('2021-12-15T10:00:01.000Z')
             snapshotOptions.date = dateAfterFirst
 
-            const snapshotStoreAfterFirst =  await snapshotExample.create(snapshotOptions)
+            const snapshotStoreAfterFirst = await snapshotExample.create(snapshotOptions)
             const materializedldesAfterFirst =
                 `<http://example.org/snapshot> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <https://w3id.org/tree#Collection> .
 <http://example.org/snapshot> <https://w3id.org/ldes#versionMaterializationOf> <http://example.org/ES> .
@@ -150,36 +155,55 @@ ex:ES1 a ldes:EventStream;
 <http://example.org/resource1> <http://purl.org/dc/terms/issued> "2021-12-15T10:00:00.000Z"^^<http://www.w3.org/2001/XMLSchema#dateTime> .
 <http://example.org/resource1> <http://purl.org/dc/terms/title> "First version of the title" .
 `
-            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier,TREE.member,null,null).length).toBe(1)
+            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier, RDF.type, TREE.Collection, null).length).toBe(1)
+            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier, LDES.versionMaterializationOf, ldesIdentifier, null).length).toBe(1)
+            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier, LDES.versionMaterializationUntil, null, null).length).toBe(1)
+            expect(snapshotStoreAfterFirst.getQuads(snapshotIdentifier, TREE.member, null, null).length).toBe(1)
 
-            const dateLiteralAfterFirst = snapshotStoreAfterFirst.getObjects(snapshotIdentifier,LDES.versionMaterializationUntil,null)[0] as Literal
+            const dateLiteralAfterFirst = snapshotStoreAfterFirst.getObjects(snapshotIdentifier, LDES.versionMaterializationUntil, null)[0] as Literal
             expect(extractDateFromLiteral(dateLiteralAfterFirst)).toStrictEqual(dateAfterFirst)
             expect(snapshotStoreExactFirst.getObjects(versionObjectIdentifier, DCT.title, null)[0].value).toStrictEqual('First version of the title')
 
             // date after already tested by first two tests
         })
+    })
 
-        it("generated using a custom identifier for the new tree:collection at current time.", async () => {
-            const snapshotIdentifier = 'https://snapshot.ldes/'
-            snapshotOptions.snapshotIdentifier = snapshotIdentifier
-            const snapshotStore =  await snapshotExample.create(snapshotOptions)
-            expect(snapshotStore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,snapshotOptions.ldesIdentifier,null).length).toBe(1)
-            expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
-        })
+    it('is generated as defined by the spec on an LDES', async () => {
+        const snapshotStore = await snapshotExample.create(snapshotOptions)
+        const snapshotIdentifier = snapshotOptions.snapshotIdentifier!
+        const ldesIdentifier = snapshotOptions.ldesIdentifier
+        const versionObjectIdentifier = 'http://example.org/resource1v1'
+
+        expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, TREE.member, versionObjectIdentifier, null).length).toBe(1)
+
+        expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.isVersionOf, 'http://example.org/resource1', null).length).toBe(1)
+        expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.issued, null, null).length).toBe(1)
+        expect(snapshotStore.getQuads(versionObjectIdentifier, DCT.title, null, null).length).toBe(1)
+    })
+
+    it("generated using a custom identifier for the new tree:collection at current time.", async () => {
+        const snapshotIdentifier = 'https://snapshot.ldes/'
+        snapshotOptions.snapshotIdentifier = snapshotIdentifier
+        const snapshotStore = await snapshotExample.create(snapshotOptions)
+
+        expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
+    })
 
     it("generated using default values for date and snapshotIdentifier", async () => {
-        const snapshotStore =  await snapshotExample.create({
+        const snapshotStore = await snapshotExample.create({
             ldesIdentifier: snapshotOptions.ldesIdentifier,
             timestampPath: snapshotOptions.timestampPath,
             versionOfPath: snapshotOptions.versionOfPath
         })
         const snapshotIdentifier = 'http://example.org/snapshot'
-        expect(snapshotStore.getQuads(snapshotIdentifier,RDF.type,TREE.Collection,null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationOf,snapshotOptions.ldesIdentifier,null).length).toBe(1)
-        expect(snapshotStore.getQuads(snapshotIdentifier,LDES.versionMaterializationUntil,null,null).length).toBe(1)
+
+        expect(snapshotStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath, null).length).toBe(1)
+        expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath, null).length).toBe(1)
     })
 })
