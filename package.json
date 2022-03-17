@@ -9,6 +9,11 @@
     "build": "rm -rf dist/; tsc",
     "release": "  npm run build && npm publish --access public"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/treecg/LDES-Snapshot.git"
+  },
+  "homepage": "https://github.com/treecg/LDES-Snapshot#readme",
   "files": [
     "dist"
   ],
