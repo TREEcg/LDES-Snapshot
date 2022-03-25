@@ -1,4 +1,4 @@
-import {memberStreamtoStore, storeAsMemberStream, turtleStringToStore} from "../src/util/Conversion";
+import {memberStreamtoStore, storeAsMemberStream, storeToString, turtleStringToStore} from "../src/util/Conversion";
 import {Readable} from "stream";
 import {ISnapshotOptions, SnapshotTransform} from "../src/SnapshotTransform";
 import {extractSnapshotOptions} from "../src/util/SnapshotUtil";
@@ -186,5 +186,62 @@ ex:resource1v1
         const transformedStore = await memberStreamtoStore(memberStreamTransformed, snapshotIdentifier)
 
         expect(transformedStore.getQuads('http://example.org/resource1v1', null, null, null).length).toBe(3)
+    })
+
+    it("handles memberStream with triples in quads that have different subject than member itself", async () => {
+        // todo: document more understandable and do actual test
+        const stream = new Readable({
+            objectMode: true,
+            read() {
+                const identifierNode = namedNode("http://example.org/ex#v1")
+                const versionNode = namedNode("http://example.org/ex")
+                store = new Store();
+                store.addQuad(identifierNode, namedNode(DCT.title), literal("test"))
+                store.addQuad(identifierNode, namedNode(DCT.isVersionOf), versionNode)
+                store.addQuad(identifierNode, namedNode(DCT.issued), dateToLiteral(new Date("2021-12-15T10:00:00.000Z")))
+                store.addQuad(identifierNode, namedNode('http://extra/'), namedNode("http://example.org/"))
+                store.addQuad(namedNode("http://example.org/"), namedNode(DCT.title), literal("test"))
+                this.push({
+                    id: identifierNode,
+                    quads: store.getQuads(null, null, null, null)
+                })
+                this.push(null)
+            }
+        })
+        snapshotOptions.materialized = true
+        const snapshotTransformer = new SnapshotTransform(snapshotOptions)
+        const memberStreamTransformed = stream.pipe(snapshotTransformer)
+        const transformedStore = await memberStreamtoStore(memberStreamTransformed)
+        console.log(storeToString(transformedStore))
+        console.log(transformedStore.countQuads(null,null,null,null))
+    })
+
+    it("handles memberStream with triples in quads that have blank node subject linked by member", async () => {
+        // todo: document more understandable and do actual test
+        const stream = new Readable({
+            objectMode: true,
+            read() {
+                const identifierNode = namedNode("http://example.org/ex#v1")
+                const versionNode = namedNode("http://example.org/ex")
+                store = new Store();
+                store.addQuad(identifierNode, namedNode(DCT.title), literal("test"))
+                store.addQuad(identifierNode, namedNode(DCT.isVersionOf), versionNode)
+                store.addQuad(identifierNode, namedNode(DCT.issued), dateToLiteral(new Date("2021-12-15T10:00:00.000Z")))
+                const bn = store.createBlankNode()
+                store.addQuad(identifierNode, namedNode('http://extra/'), bn)
+                store.addQuad(bn, namedNode(DCT.title), literal("test"))
+                this.push({
+                    id: identifierNode,
+                    quads: store.getQuads(null, null, null, null)
+                })
+                this.push(null)
+            }
+        })
+        snapshotOptions.materialized = true
+        const snapshotTransformer = new SnapshotTransform(snapshotOptions)
+        const memberStreamTransformed = stream.pipe(snapshotTransformer)
+        const transformedStore = await memberStreamtoStore(memberStreamTransformed)
+        console.log(storeToString(transformedStore))
+        console.log(transformedStore.countQuads(null,null,null,null))
     })
 })
