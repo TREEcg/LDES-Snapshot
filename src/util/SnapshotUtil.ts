@@ -1,10 +1,11 @@
-import {DataFactory, Store} from "n3";
+import {DataFactory, Literal, Store} from "n3";
 import {NamedNode} from "@rdfjs/types";
-import {LDES, RDF, TREE} from "./Vocabularies";
-import {dateToLiteral} from "./TimestampUtil";
+import {DCT, LDES, RDF, TREE} from "./Vocabularies";
+import {dateToLiteral, extractDateFromLiteral} from "./TimestampUtil";
 import {ISnapshotOptions} from "../SnapshotTransform";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
+import {Member} from "@treecg/types";
 
 /***************************************
  * Title: snapshotUtil
@@ -103,3 +104,59 @@ export function isMember(data: any): boolean {
         } else return false
     } else return false
 }
+
+/**
+ * Extracts the materialized id from a non-materialized member
+ * @param member
+ * @param versionOfPath
+ * @returns {string}
+ */
+export function extractMaterializedId(member: Member, versionOfPath: string): string {
+    const store = new Store(member.quads)
+    const versionIds = store.getObjects(member.id, namedNode(versionOfPath), null)
+    if (versionIds.length !== 1) {
+        throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
+    }
+    return versionIds[0].value
+}
+
+/**
+ * Extracts the materialized id from a materialized member
+ * @param member
+ * @returns {string}
+ */
+export function extractMaterializedIdMaterialized(member: Member): string {
+    const store = new Store(member.quads)
+    const versionIds = store.getSubjects(namedNode(DCT.hasVersion), member.id, null)
+    if (versionIds.length !== 1) {
+        throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
+    }
+    return versionIds[0].value
+}
+
+/**
+ * Extracts the date from a member. Note: the date must be of type xsd:dateTime
+ * @param store
+ * @param timestampPath
+ */
+export function extractDate(store: Store, timestampPath: string): Date {
+    const dateTimeLiterals = store.getObjects(null, namedNode(timestampPath), null)
+    if (dateTimeLiterals.length !== 1) {
+        throw Error(`Found ${dateTimeLiterals.length} dateTime literals.`)
+    }
+    return extractDateFromLiteral(dateTimeLiterals[0] as Literal)
+}
+
+/**
+ * Extracts the version Identifier from a member
+ * @param store
+ * @param versionOfPath
+ */
+export function extractVersionId(store: Store, versionOfPath: string): string {
+    const versionIds = store.getObjects(null, namedNode(versionOfPath), null)
+    if (versionIds.length !== 1) {
+        throw Error(`Found ${versionIds.length} versionOfPaths.`)
+    }
+    return versionIds[0].value
+}
+

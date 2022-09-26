@@ -1,6 +1,6 @@
 {
   "name": "@treecg/ldes-snapshot",
-  "version": "0.0.4",
+  "version": "0.0.5",
   "description": "Create a snapshot of a version materialized LDES ",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

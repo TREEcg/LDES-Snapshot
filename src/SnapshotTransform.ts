@@ -10,7 +10,7 @@ import {DataFactory, Literal, Store} from "n3";
 import {Quad} from "@rdfjs/types";
 import {extractDateFromLiteral} from "./util/TimestampUtil";
 import {materialize} from "@treecg/version-materialize-rdf.js";
-import {createSnapshotMetadata, isMember} from "./util/SnapshotUtil";
+import {createSnapshotMetadata, extractDate, extractVersionId, isMember} from "./util/SnapshotUtil";
 import {Logger} from "./logging/Logger";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
@@ -157,21 +157,23 @@ export class SnapshotTransform extends Transform {
 // note: only handles xsd:dateTime
     private extractDate(member: Member): Date {
         const store = new Store(member.quads)
-        const dateTimeLiterals = store.getObjects(member.id, namedNode(this.timestampPath), null)
-        if (dateTimeLiterals.length !== 1) {
+        try {
+            return extractDate(store, this.timestampPath)
+        } catch (e) {
+            const dateTimeLiterals = store.getObjects(member.id, namedNode(this.timestampPath), null)
             throw Error(`Found ${dateTimeLiterals.length} dateTime literals following the timestamp path of ${member.id.value}; expected one such literal.`)
         }
-        return extractDateFromLiteral(dateTimeLiterals[0] as Literal)
     }
 
     // note: use the raw member, not the materialized
     private extractVersionId(member: Member) {
         const store = new Store(member.quads)
-        const versionIds = store.getObjects(member.id, namedNode(this.versionOfPath), null)
-        if (versionIds.length !== 1) {
+        try {
+            return extractVersionId(store, this.versionOfPath)
+        } catch (e) {
+            const versionIds = store.getObjects(member.id, namedNode(this.versionOfPath), null)
             throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
         }
-        return versionIds[0].value
     }
 }
 
