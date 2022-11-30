@@ -93,7 +93,10 @@ export class SnapshotTransform extends Transform {
 
     _flush() {
         // called at the end
-
+        if (!this.emitedMetadata) {
+            this.emit('metadata', this.metadataStore.getQuads(null, null, null, null))
+            this.emitedMetadata = true
+        }
         this.transformedMap.forEach((value, key) => {
             //Note: can be wrong if not all subjects of the quads are the same id
             // -> could be solved in a more thorough isMember test before processing the members

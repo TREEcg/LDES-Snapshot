@@ -6,6 +6,7 @@ import {ISnapshotOptions} from "../SnapshotTransform";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import {Member} from "@treecg/types";
+import {SnapshotMetadataInitializer} from "../metadata/SnapshotMetadataInitializer";
 
 /***************************************
  * Title: snapshotUtil
@@ -33,11 +34,7 @@ export function createSnapshotMetadata(options: ISnapshotOptions): Store {
     } else {
         if (!options.versionOfPath) throw new Error("No versionOfPath was given in options")
         if (!options.timestampPath) throw new Error("No timestampPath was given in options")
-        store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(LDES.EventStream)))
-        store.add(quad(snapshotIdentifier, namedNode(LDES.versionOfPath), namedNode(options.versionOfPath)))
-        store.add(quad(snapshotIdentifier, namedNode(LDES.timestampPath), namedNode(options.timestampPath)))
-        // todo: maybe add a reference to the original LDES? e.g. predicate: ldes:isSnapshotOf
-        //  on top of that: also add the time of the ldes. e.g. predicate: ldes:snapshotAt
+        store.addQuads(SnapshotMetadataInitializer.generateSnapshotMetadata(options).getStore().getQuads(null, null, null,null))
     }
     return store
 }
