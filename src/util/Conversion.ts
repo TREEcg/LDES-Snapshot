@@ -45,7 +45,15 @@ export async function stringToStore(text: string, options: ParseOptions): Promis
  * @returns {Readable}
  */
 export function storeAsMemberStream(store: Store): Readable {
-    // todo: retrieve member
+    // no members -> empty stream
+    if (store.getSubjects(TREE.member, null, null).length === 0) {
+        return new Readable({
+            objectMode: true,
+            read() {
+                this.push(null)
+            }
+        })
+    }
     const ldesIdentifier = store.getSubjects(TREE.member, null, null)[0].value
     const members = extractMembers(store, ldesIdentifier)
     const myReadable = new Readable({
@@ -68,11 +76,10 @@ export function storeAsMemberStream(store: Store): Readable {
  */
 export function extractMembers(store: Store, ldesIdentifier: string): Member[] {
     const memberSubjects = store.getObjects(ldesIdentifier, TREE.member, null)
-    const members : Member[] = memberSubjects.map(memberSubject => {
+    const members: Member[] = memberSubjects.map(memberSubject => {
         return {
             id: memberSubject,
             quads: store.getQuads(memberSubject, null, null, null)
-
         }
     })
 
@@ -101,7 +108,7 @@ export function extractMembers(store: Store, ldesIdentifier: string): Member[] {
             // defined within this single resource
             member.quads.push(
                 ...store.getQuads(quad.object, null, null, null).filter((obj) => {
-                    return obj.object.id === member.id.value|| !((mainSubjects as Set<string>).has(obj.object.id))
+                    return obj.object.id === member.id.value || !((mainSubjects as Set<string>).has(obj.object.id))
                 })
             );
         }

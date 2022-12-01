@@ -12,6 +12,10 @@ import {memberStreamtoStore, storeAsMemberStream} from "./util/Conversion";
 export class Snapshot {
     private baseStore: Store;
 
+    /**
+     *
+     * @param store an N3 Store containing a versioned LDES from which you want to create a Snapshot
+     */
     constructor(store: Store) {
         this.baseStore = store;
     }
@@ -25,10 +29,10 @@ export class Snapshot {
      * @return {Promise<Store>}
      */
     async create(options: ISnapshotOptions): Promise<Store> {
-        options.date = options.date ? options.date : new Date();
-        options.snapshotIdentifier = options.snapshotIdentifier ? options.snapshotIdentifier : 'http://example.org/snapshot';
-        options.timestampPath = options.timestampPath ? options.timestampPath: retrieveTimestampProperty(this.baseStore, options.ldesIdentifier)
-        options.versionOfPath = options.versionOfPath ? options.versionOfPath: retrieveVersionOfProperty(this.baseStore, options.ldesIdentifier)
+        options.date = options.date ?? new Date();
+        options.snapshotIdentifier = options.snapshotIdentifier ?? 'http://example.org/snapshot';
+        options.timestampPath = options.timestampPath ?? retrieveTimestampProperty(this.baseStore, options.ldesIdentifier)
+        options.versionOfPath = options.versionOfPath ?? retrieveVersionOfProperty(this.baseStore, options.ldesIdentifier)
 
         const snapshotStore = createSnapshotMetadata(options)
         const memberStream = storeAsMemberStream(this.baseStore)

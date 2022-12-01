@@ -1,6 +1,6 @@
 /***************************************
  * Title: SnapshotMetadataInitializer.ts
- * Description: TODO
+ * Description: A class that generates metadata for a {@link ISnapshot}.
  * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
  * Created on 30/11/2022
  *****************************************/
@@ -9,6 +9,11 @@ import {ISnapshot, SnapshotMetadata} from "./SnapshotMetadata";
 import {DCT} from "../util/Vocabularies";
 
 export class SnapshotMetadataInitializer {
+    /**
+     * Generate {@link ISnapshot} based on {@link ISnapshotOptions}.
+     * @param options
+     * @returns {SnapshotMetadata}
+     */
     public static generateSnapshotMetadata(options: ISnapshotOptions): ISnapshot {
         let date = options.date ?? new Date()
         return new SnapshotMetadata({

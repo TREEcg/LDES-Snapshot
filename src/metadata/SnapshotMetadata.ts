@@ -1,6 +1,6 @@
 /***************************************
- * Title: ISnapshot
- * Description: TODO
+ * Title: SnapshotMetadata
+ * Description: Contains the interface and implementation for the metadata of a Snapshot (of a versioned LDES).
  * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
  * Created on 30/11/2022
  *****************************************/
@@ -73,8 +73,6 @@ export class SnapshotMetadata implements ISnapshot {
             store.addQuad(namedNode(this.eventStreamIdentifier), TREE.terms.member, namedNode(snapshotMember.id.value))
             store.addQuads(snapshotMember.quads)
         })
-
-
         return store
     }
 }

@@ -8,11 +8,20 @@ import {extractMembers} from "../util/Conversion";
 
 /***************************************
  * Title: SnapshotMetadataParser
- * Description: TODO
+ * Description: A class that parses metadata for a Snapshot (https://data.vlaanderen.be/doc/applicatieprofiel/ldes#Snapshot) {@link ISnapshot}
  * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
  * Created on 30/11/2022
  *****************************************/
-export class SnapshotMetadataParser extends AbstractMetadataParser{
+export class SnapshotMetadataParser extends AbstractMetadataParser {
+    /**
+     * Parses an N3 Store to {@link ISnapshot}.
+     * Only deals with non materialized snapshots.
+     *
+     * Note: Currently does not parse the shape of the LDES
+     *
+     * @param store An N3 Store.
+     * @returns {SnapshotMetadata}
+     */
     public static extractSnapshotMetadata(store: Store): ISnapshot {
         const eventStreamIdentifier = this.parseLDESIdentifier(store)
         const timestampPath = this.parseTimestampPath(store, eventStreamIdentifier)
@@ -33,8 +42,17 @@ export class SnapshotMetadataParser extends AbstractMetadataParser{
         return snapshot
     }
 
-    protected static extractSnapshotMembers(store: Store, identifier: string, timestampPath: string, versionOfPath: string): ISnapshotMember[] {
-        const members = extractMembers(store, identifier)
+    /**
+     * Extracts non materialized {@link ISnapshotMember}s from an N3 Store.
+     *
+     * @param store An N3 Store.
+     * @param ldesIdentifier
+     * @param timestampPath The timestampPath of a versioned LDES
+     * @param versionOfPath The versionOfPath of a versioned LDES
+     * @returns {ISnapshotMember[]}
+     */
+    protected static extractSnapshotMembers(store: Store, ldesIdentifier: string, timestampPath: string, versionOfPath: string): ISnapshotMember[] {
+        const members = extractMembers(store, ldesIdentifier)
         const snapshotMembers: ISnapshotMember[] = []
 
         members.forEach(member => {
@@ -48,7 +66,7 @@ export class SnapshotMetadataParser extends AbstractMetadataParser{
         function extractObjectIdentifier(store: Store, versionOfPath: string, memberId: string): string { // should there be a memberId given?
             const ObjectIdentifierNodes = store.getObjects(memberId, versionOfPath, null)
             if (ObjectIdentifierNodes.length !== 1) {
-                throw Error(`Expected one versionOfPath per member. ${ObjectIdentifierNodes.length} are present.`)
+                throw Error(`Expected one versionOfPath per member. ${ObjectIdentifierNodes.length} are present for member ${memberId}.`)
             }
             return ObjectIdentifierNodes[0].value
         }
@@ -56,7 +74,7 @@ export class SnapshotMetadataParser extends AbstractMetadataParser{
         function extractDate(store: Store, timestampPath: string, memberId: string): Date { // should there be a memberId given?
             const dateNodes = store.getObjects(memberId, timestampPath, null)
             if (dateNodes.length !== 1) {
-                throw Error(`Expected one timestampPath per member. ${dateNodes.length} are present.`)
+                throw Error(`Expected one timestampPath per member. ${dateNodes.length} are present for member ${memberId}.`)
             }
             return extractDateFromLiteral(dateNodes[0] as Literal)
         }
