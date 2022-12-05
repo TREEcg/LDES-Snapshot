@@ -1,13 +1,13 @@
 {
   "name": "@treecg/ldes-snapshot",
-  "version": "0.1.0-alpha.0",
+  "version": "0.1.0-alpha.1",
   "description": "Create a snapshot of a version materialized LDES ",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
     "test": "jest",
     "build": "rm -rf dist/; tsc",
-    "release": "  npm run build && npm publish --access public"
+    "release": "npm run build && npm publish --access public"
   },
   "repository": {
     "type": "git",

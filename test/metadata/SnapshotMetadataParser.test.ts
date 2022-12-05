@@ -2,7 +2,7 @@ import "jest-rdf"
 import {DataFactory, Store} from "n3";
 import {storeToString, turtleStringToStore} from "../../src/util/Conversion";
 import {namedNode} from "@rdfjs/data-model";
-import {DCT, LDES, TREE} from "../../src/util/Vocabularies";
+import {DCT, LDES, RDF, TREE} from "../../src/util/Vocabularies";
 import literal = DataFactory.literal;
 import {dateToLiteral} from "../../src/util/TimestampUtil";
 import {SnapshotMetadataParser} from "../../src/metadata/SnapshotMetadataParser";
@@ -66,4 +66,17 @@ describe('A SnapshotMetadataParser', () => {
         store.addQuad(memberNode, DCT.terms.isVersionOf, namedNode("example.org/" + date.valueOf()))
         expect(() => SnapshotMetadataParser.extractSnapshotMetadata(store)).toThrow(Error)
     });
+
+    it('fails parsing when there are multiple LDESes.', () => {
+        store.addQuad(namedNode("test"), RDF.terms.type, LDES.terms.EventStream)
+        expect(() => SnapshotMetadataParser.extractSnapshotMetadata(store)).toThrow(Error)
+    });
+
+    it('can parse a snapshot given its LDES identifier.', () => {
+        const quads = store.getQuads(null,null,null,null)
+        store.addQuad(namedNode("test"), RDF.terms.type, LDES.terms.EventStream)
+        let snapshotMetadata = SnapshotMetadataParser.extractSnapshotMetadata(store, snapshotIdentifier)
+        expect( snapshotMetadata.getStore()).toBeRdfIsomorphic(quads)
+    });
+
 });

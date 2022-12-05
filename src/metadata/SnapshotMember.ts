@@ -1,6 +1,6 @@
 /***************************************
  * Title: SnapshotMember
- * Description: TODO
+ * Description: Contains an extension to Member interface: added objectIdentifier and timestamp
  * Author: Wout Slabbinck (wout.slabbinck@ugent.be)
  * Created on 30/11/2022
  *****************************************/
