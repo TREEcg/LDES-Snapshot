@@ -21,27 +21,28 @@ export class Snapshot {
     }
 
     /**
-     * Creates a snapshot from a version LDES. (see: https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)
+     * Creates a snapshot from a versioned LDES. (see: https://semiceu.github.io/LinkedDataEventStreams/#version-materializations)
      * Default:
      * uses "http://example.org/snapshot" as identifier for the snapshot (tree:collection)
      * and uses the current time for ldes:versionMaterializationUntil
-     * @param options optional extra paramaters for creating the snapshot
+     * @param options optional extra parameters for creating the snapshot
+     * @param snapshotStore (optional) a snapshot Store (can be used to create an incremental snapshot on top of an existing one)
      * @return {Promise<Store>}
      */
-    async create(options: ISnapshotOptions): Promise<Store> {
+    async create(options: ISnapshotOptions, snapshotStore?: Store): Promise<Store> {
         options.date = options.date ?? new Date();
         options.snapshotIdentifier = options.snapshotIdentifier ?? 'http://example.org/snapshot';
         options.timestampPath = options.timestampPath ?? retrieveTimestampProperty(this.baseStore, options.ldesIdentifier)
         options.versionOfPath = options.versionOfPath ?? retrieveVersionOfProperty(this.baseStore, options.ldesIdentifier)
 
-        const snapshotStore = createSnapshotMetadata(options)
+        const store = createSnapshotMetadata(options)
         const memberStream = storeAsMemberStream(this.baseStore)
-        const snapshotTransformer = new SnapshotTransform(options);
+        const snapshotTransformer = new SnapshotTransform(options, snapshotStore);
         const transformationOutput = memberStream.pipe(snapshotTransformer)
         const transformedStore = await memberStreamtoStore(transformationOutput, options.snapshotIdentifier)
-        snapshotStore.addQuads(transformedStore.getQuads(null, null, null, null))
+        store.addQuads(transformedStore.getQuads(null, null, null, null))
 
-        return snapshotStore
+        return store
     }
 
 }

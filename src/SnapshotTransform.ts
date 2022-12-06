@@ -11,9 +11,10 @@ import {Quad} from "@rdfjs/types";
 import {materialize} from "@treecg/version-materialize-rdf.js";
 import {createSnapshotMetadata, extractDate, extractObjectIdentifier, isMember} from "./util/SnapshotUtil";
 import {Logger} from "./logging/Logger";
-import namedNode = DataFactory.namedNode;
-import quad = DataFactory.quad;
 import {makeTriples} from "./util/Conversion";
+import namedNode = DataFactory.namedNode;
+import {SnapshotMetadataParser} from "./metadata/SnapshotMetadataParser";
+import {LDES} from "./util/Vocabularies";
 
 export interface ISnapshotOptions {
     date?: Date;
@@ -43,7 +44,12 @@ export class SnapshotTransform extends Transform {
     private emitedMetadata: boolean;
     private metadataStore: Store;
 
-    public constructor(options: ISnapshotOptions) {
+    /**
+     *
+     * @param options parameters for creating the snapshot
+     * @param snapshotStore (optional) a snapshot Store (can be used to create an incremental snapshot on top of an existing one)
+     */
+    public constructor(options: ISnapshotOptions, snapshotStore?: Store) {
         super({objectMode: true, highWaterMark: 1000});
         if (!options.versionOfPath) throw new Error("No versionOfPath was given in options")
         if (!options.timestampPath) throw new Error("No timestampPath was given in options")
@@ -68,6 +74,14 @@ export class SnapshotTransform extends Transform {
         })
         this.emitedMetadata = false;
 
+        if (snapshotStore) {
+            const snapshotOf = snapshotStore.getQuads(null, LDES.snapshotOf, this.ldesIdentifier, null)
+            if (snapshotOf.length !== 1) throw new Error("Given snapshot does not point to the given LDES.")
+            const snapshotMetadata = SnapshotMetadataParser.extractSnapshotMetadata(snapshotStore, snapshotOf[0].subject.value)
+            for (const member of snapshotMetadata.members) {
+                this.processMember(member)
+            }
+        }
     }
 
     public _transform(chunk: any, _enc: any, done: () => void) {
@@ -130,20 +144,13 @@ export class SnapshotTransform extends Transform {
     }
 
     private transform(member: Member): Quad[] {
-        const transformedTriples: Quad[] = []
+        let transformedTriples: Quad[]
 
         if (this.materialized) {
-            const materializedQuads = materialize(member.quads, {
-                versionOfProperty: namedNode(this.versionOfPath),
-                timestampProperty: namedNode(this.timestampPath)
-            });
             // transform quads to triples
-            transformedTriples.push(...makeTriples(materializedQuads, {
-                objectIdentifier: this.extractObjectIdentifier(member),
-                timestampPath: this.timestampPath
-            }))
+            transformedTriples = this.materialize(member)
         } else {
-            transformedTriples.push(...member.quads)
+            transformedTriples = member.quads
         }
         return transformedTriples
     }
@@ -177,6 +184,17 @@ export class SnapshotTransform extends Transform {
             const versionIds = store.getObjects(member.id, namedNode(this.versionOfPath), null)
             throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
         }
+    }
+
+    private materialize(member: Member): Quad[] {
+        const materializedQuads = materialize(member.quads, {
+            versionOfProperty: namedNode(this.versionOfPath),
+            timestampProperty: namedNode(this.timestampPath)
+        });
+        return makeTriples(materializedQuads, {
+            objectIdentifier: this.extractObjectIdentifier(member),
+            timestampPath: this.timestampPath
+        })
     }
 }
 

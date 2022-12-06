@@ -20,7 +20,7 @@ export class SnapshotMetadataParser extends AbstractMetadataParser {
      * Note: Currently does not parse the shape of the LDES
      *
      * @param store An N3 Store.
-     * @param eventStreamIdentifier (optional) URI of the Linked Data Event Stream Identifier.
+     * @param eventStreamIdentifier (optional) URI of the Snapshot Identifier.
      * @returns {SnapshotMetadata}
      */
     public static extractSnapshotMetadata(store: Store, eventStreamIdentifier?: string): ISnapshot {
