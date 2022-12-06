@@ -6,11 +6,10 @@
  *****************************************/
 import {Transform} from 'stream';
 import {Member} from '@treecg/types'
-import {DataFactory, Literal, Store} from "n3";
+import {DataFactory, Store} from "n3";
 import {Quad} from "@rdfjs/types";
-import {extractDateFromLiteral} from "./util/TimestampUtil";
 import {materialize} from "@treecg/version-materialize-rdf.js";
-import {createSnapshotMetadata, extractDate, extractVersionId, isMember} from "./util/SnapshotUtil";
+import {createSnapshotMetadata, extractDate, extractObjectIdentifier, isMember} from "./util/SnapshotUtil";
 import {Logger} from "./logging/Logger";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
@@ -30,7 +29,7 @@ export class SnapshotTransform extends Transform {
     // transformedMap is a map that has as key the version identifier and as value the transformed quads of the member
     private transformedMap: Map<string, Array<Quad>>;
     // a map that has as key the version identifier and as a value the time of the current saved (in transformedMap)
-    // transformed version of that version object
+    // transformed version of that version-object
     private versionTimeMap: Map<string, Date>;
 
     private readonly date: Date;
@@ -93,7 +92,10 @@ export class SnapshotTransform extends Transform {
 
     _flush() {
         // called at the end
-
+        if (!this.emitedMetadata) {
+            this.emit('metadata', this.metadataStore.getQuads(null, null, null, null))
+            this.emitedMetadata = true
+        }
         this.transformedMap.forEach((value, key) => {
             //Note: can be wrong if not all subjects of the quads are the same id
             // -> could be solved in a more thorough isMember test before processing the members
@@ -104,24 +106,24 @@ export class SnapshotTransform extends Transform {
     }
 
     private processMember(member: Member) {
-        const versionObjectID = this.extractVersionId(member)
+        const objectIdentifier = this.extractObjectIdentifier(member)
 
-        if (this.transformedMap.has(versionObjectID)) {
-            const versionPresentTime = this.versionTimeMap.get(versionObjectID)!
+        if (this.transformedMap.has(objectIdentifier)) {
+            const versionPresentTime = this.versionTimeMap.get(objectIdentifier)!
             const currentTime = this.extractDate(member)
             // dateTime must be more recent than the one already present and not more recent than the snapshotDate
             if (currentTime.getTime() <= this.date.getTime() && versionPresentTime.getTime() < currentTime.getTime()) {
-                this.transformedMap.set(versionObjectID, this.transform(member))
-                this.versionTimeMap.set(versionObjectID, currentTime)
+                this.transformedMap.set(objectIdentifier, this.transform(member))
+                this.versionTimeMap.set(objectIdentifier, currentTime)
             }
         } else {
-            //first time member
+            // first time for given version-object
             const transformed = this.transform(member)
             const date = this.extractDate(member)
 
             if (date.getTime() <= this.date.getTime()) {
-                this.transformedMap.set(versionObjectID, transformed)
-                this.versionTimeMap.set(versionObjectID, date)
+                this.transformedMap.set(objectIdentifier, transformed)
+                this.versionTimeMap.set(objectIdentifier, date)
             }
         }
     }
@@ -138,7 +140,7 @@ export class SnapshotTransform extends Transform {
             for (const q of materializedQuads) {
                 if (q.predicate.value === this.timestampPath) {
                     // have version object id as indication for the update
-                    transformedTriples.push(quad(namedNode(this.extractVersionId(member)), q.predicate, q.object))
+                    transformedTriples.push(quad(namedNode(this.extractObjectIdentifier(member)), q.predicate, q.object))
                 } else {
                     // note: ugly fix to undefined problem, copying all other triples
                     if (q.subject) {
@@ -153,8 +155,12 @@ export class SnapshotTransform extends Transform {
         }
         return transformedTriples
     }
-
-// note: only handles xsd:dateTime
+    /**
+     * Extracts the timestamp from a member (which is a version-object).
+     * note: only handles xsd:dateTime
+     * @param member a {@link Member}
+     * @returns {string}
+     */
     private extractDate(member: Member): Date {
         const store = new Store(member.quads)
         try {
@@ -165,11 +171,15 @@ export class SnapshotTransform extends Transform {
         }
     }
 
-    // note: use the raw member, not the materialized
-    private extractVersionId(member: Member) {
+    /**
+     * Extracts the object Identifier from a member (which is a version-object).
+     * @param member a non-materialized {@link Member}
+     * @returns {string}
+     */
+    private extractObjectIdentifier(member: Member) {
         const store = new Store(member.quads)
         try {
-            return extractVersionId(store, this.versionOfPath)
+            return extractObjectIdentifier(store, this.versionOfPath)
         } catch (e) {
             const versionIds = store.getObjects(member.id, namedNode(this.versionOfPath), null)
             throw Error(`Found ${versionIds.length} identifiers following the version paths of ${member.id.value}; expected one such identifier.`)
