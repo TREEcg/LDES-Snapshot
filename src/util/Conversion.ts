@@ -10,6 +10,10 @@ import {Readable} from "stream";
 import {TREE} from "./Vocabularies";
 import namedNode = DataFactory.namedNode;
 import {Member} from "@treecg/types";
+import {Quad} from "@rdfjs/types";
+import quad = DataFactory.quad;
+import {SnapshotMetadataParser} from "../metadata/SnapshotMetadataParser";
+import {Snapshot} from "../Snapshot";
 
 const rdfParser = require("rdf-parse").default;
 const storeStream = require("rdf-store-stream").storeStream;
@@ -131,4 +135,32 @@ export async function memberStreamtoStore(memberStream: Readable, collectionIden
         }
     }
     return store
+}
+
+/**
+ * A function to convert materialized quads (generated from {@link https://www.npmjs.com/package/@treecg/version-materialize-rdf.js|materialize})
+ * to triple quads.
+ *
+ * Optionally, the timestampPath can be given to add the timestamp property to the Object Identifier instead of the member Identifier.
+ * @param materializedQuads materialized Quads.
+ * @param opts Contains the object identifier and the timestampPath to couple the timestamp to the object identifier.
+ * @returns {Quad[]} materialized Triples.
+ */
+export function makeTriples(materializedQuads: Quad[], opts?: {objectIdentifier: string, timestampPath: string}): Quad[] {
+    const transformedTriples: Quad[] = []
+    // code below here is to transform quads to triples
+    for (const q of materializedQuads) {
+        if (opts && q.predicate.value === opts.timestampPath) {
+            // have version object id as indication for the update
+            transformedTriples.push(quad(namedNode(opts.objectIdentifier), q.predicate, q.object))
+        } else {
+        // note: ugly fix to undefined problem, copying all other triples
+        if (q.subject) {
+            transformedTriples.push(quad(q.subject, q.predicate, q.object));
+        } else {
+            transformedTriples.push(quad(namedNode(q.graph.value), q.predicate, q.object));
+            }
+        }
+    }
+    return transformedTriples
 }

@@ -1,9 +1,14 @@
-import {turtleStringToStore} from "../src/util/Conversion";
+import {storeToString, turtleStringToStore} from "../src/util/Conversion";
 import {Snapshot} from "../src/Snapshot";
-import {DataFactory, Literal} from "n3";
+import {DataFactory, Literal, Store} from "n3";
 import {ISnapshotOptions} from "../src/SnapshotTransform";
 import {DCT, LDES, RDF, TREE} from "../src/util/Vocabularies";
-import {extractDateFromLiteral} from "../src/util/TimestampUtil";
+import {dateToLiteral, extractDateFromLiteral} from "../src/util/TimestampUtil";
+import quad = DataFactory.quad;
+import {namedNode} from "@rdfjs/data-model";
+import {SnapshotMetadataParser} from "../src/metadata/SnapshotMetadataParser";
+import "jest-rdf"
+import {combineSnapshots} from "../src/util/SnapshotUtil";
 
 describe("A Snapshot", () => {
     const ldesExample = `
@@ -203,4 +208,66 @@ ex:ES1 a ldes:EventStream;
         expect(snapshotStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
         expect(snapshotStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
     })
+    describe('(incremental)', () => {
+        let incrementalStore: Store
+        let baseSnapshotStore: Store
+        beforeEach(async () => {
+            incrementalStore = new Store()
+            const date = new Date('2022-01-01')
+            incrementalStore.addQuads([
+                quad(namedNode("http://example.org/ES"), RDF.terms.type, LDES.terms.EventStream),
+                quad(namedNode("http://example.org/ES"), LDES.terms.timestampPath, DCT.terms.issued),
+                quad(namedNode("http://example.org/ES"), LDES.terms.versionOfPath, DCT.terms.isVersionOf),
+                quad(namedNode("http://example.org/ES"), TREE.terms.member, namedNode("http://example.org/resource2v0")),
+                quad(namedNode("http://example.org/ES"), TREE.terms.member, namedNode("http://example.org/resource1v2")),
+                quad(namedNode("http://example.org/resource2v0"), namedNode(DCT.title), namedNode('"First version of the title".')),
+                quad(namedNode("http://example.org/resource2v0"), namedNode(DCT.isVersionOf), namedNode('http://example.org/resource2')),
+                quad(namedNode("http://example.org/resource2v0"), namedNode(DCT.issued), dateToLiteral(date)),
+                quad(namedNode("http://example.org/resource1v2"), namedNode(DCT.title), namedNode('"some update".')),
+                quad(namedNode("http://example.org/resource1v2"), namedNode(DCT.isVersionOf), namedNode('http://example.org/resource1')),
+                quad(namedNode("http://example.org/resource1v2"), namedNode(DCT.issued), dateToLiteral(date))
+            ])
+            baseSnapshotStore = await snapshotExample.create({
+                ldesIdentifier: snapshotOptions.ldesIdentifier
+            })
+        });
+
+        it('throws an error when it is not about the same LDES.', async () => {
+            const baseSnapshotMetadata = SnapshotMetadataParser.extractSnapshotMetadata(baseSnapshotStore)
+            baseSnapshotMetadata.snapshotOf = "test"
+            const newSnapshot = new Snapshot(incrementalStore)
+            await expect(newSnapshot.create({
+                ldesIdentifier: snapshotOptions.ldesIdentifier
+            }, baseSnapshotMetadata.getStore())).rejects.toThrow(Error)
+        });
+
+        it('creates an incremental snapshot by overwriting everything from the original.', async () => {
+            const date = new Date()
+            const options = {
+                ldesIdentifier: snapshotOptions.ldesIdentifier,
+                date
+            }
+            const newSnapshot = new Snapshot(incrementalStore)
+            const newSnapshotStore = await newSnapshot.create(options, baseSnapshotStore)
+
+            const incrementalSnapshot = await new Snapshot(incrementalStore).create(options)
+            expect(newSnapshotStore).toBeRdfIsomorphic(await combineSnapshots(incrementalSnapshot, baseSnapshotStore))
+        });
+
+        it('creates an incremental snapshot by adding a new resource in the incremental store.', async () => {
+            const date = new Date()
+            const options = {
+                ldesIdentifier: snapshotOptions.ldesIdentifier,
+                date
+            }
+            incrementalStore.removeQuad(quad(namedNode("http://example.org/ES"), TREE.terms.member, namedNode("http://example.org/resource1v2")))
+
+            const newSnapshot = new Snapshot(incrementalStore)
+            const newSnapshotStore = await newSnapshot.create(options, baseSnapshotStore)
+
+            const incrementalSnapshot = await new Snapshot(incrementalStore).create(options)
+            expect(newSnapshotStore).toBeRdfIsomorphic(await combineSnapshots(incrementalSnapshot, baseSnapshotStore))
+        });
+    });
+
 })

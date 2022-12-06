@@ -1,5 +1,6 @@
 import {turtleStringToStore} from "../../src/util/Conversion";
 import {
+    combineSnapshots,
     createSnapshotMetadata,
     extractSnapshotOptions,
     isMember,
@@ -8,11 +9,16 @@ import {
 } from "../../src/util/SnapshotUtil";
 import {DCT, LDES, RDF, TREE} from "../../src/util/Vocabularies";
 import {DataFactory, Literal, Store} from "n3";
-import {extractDateFromLiteral} from "../../src/util/TimestampUtil";
+import {dateToLiteral, extractDateFromLiteral} from "../../src/util/TimestampUtil";
+import {ISnapshotOptions} from "../../src/SnapshotTransform";
+import {ISnapshot} from "../../src/metadata/SnapshotMetadata";
+import {SnapshotMetadataInitializer} from "../../src/metadata/SnapshotMetadataInitializer";
+import {SnapshotMetadataParser} from "../../src/metadata/SnapshotMetadataParser";
+import {SnapshotMember} from "../../src/metadata/SnapshotMember";
+import "jest-rdf"
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import literal = DataFactory.literal;
-import {ISnapshotOptions} from "../../src/SnapshotTransform";
 
 describe("A SnapshotUtil", () => {
     const ldesIdentifier = 'http://example.org/ES'
@@ -205,4 +211,67 @@ ex:ES a ldes:EventStream;
         })
 
     })
+
+    describe('for combining two snapshots', () => {
+        let baseSnapshot: ISnapshot
+        let incrementalSnapshot: ISnapshot
+        let eventStreamIdentifier: string
+        const timestampPath = "http://example.org/timestampPath"
+        const versionOfPath = "http://example.org/versionOfPath"
+        beforeEach(() => {
+            eventStreamIdentifier = "http://example.org/#ES"
+            baseSnapshot = SnapshotMetadataInitializer.generateSnapshotMetadata({
+                ldesIdentifier: eventStreamIdentifier,
+                snapshotIdentifier: "http://example.org/#base",
+                timestampPath,
+                versionOfPath
+            })
+
+            incrementalSnapshot = SnapshotMetadataInitializer.generateSnapshotMetadata({
+                ldesIdentifier: eventStreamIdentifier,
+                snapshotIdentifier: "http://example.org/#incremental",
+                timestampPath,
+                versionOfPath
+            })
+        });
+
+
+        it('throws an error when the two snapshots did not come from the same LDES.', async () => {
+            incrementalSnapshot.snapshotOf = "some ES"
+
+            const combined = async () => combineSnapshots(baseSnapshot.getStore(), incrementalSnapshot.getStore())
+            await expect(combined()).rejects.toThrow(Error)
+        });
+
+        it('succeeds when any of the snapshots have no members.', async () => {
+            const combined = await combineSnapshots(baseSnapshot.getStore(), incrementalSnapshot.getStore())
+            const combinedMetadata = SnapshotMetadataParser.extractSnapshotMetadata(combined)
+            await expect(combinedMetadata).toEqual(incrementalSnapshot)
+        });
+
+        it('contains the most recent versions.', async () => {
+            const makeSnapshotMember = (memberId: string, objectId: string, date: Date) => {
+                let memberNode = namedNode(memberId)
+                return new SnapshotMember(
+                    [quad(memberNode, namedNode(versionOfPath), namedNode(objectId)),
+                        quad(memberNode, namedNode(timestampPath), dateToLiteral(date)),
+                        quad(memberNode, namedNode("test"), literal("title"))],
+                    memberId,
+                    objectId,
+                    date
+                )
+            }
+            const member1Id = "http://example.org/member1"
+            const member2Id = "http://example.org/member2"
+            const member = "http://example.org/member"
+            const member1 = makeSnapshotMember(member1Id, member, new Date(0))
+            const member2 = makeSnapshotMember(member2Id, member, new Date())
+
+            baseSnapshot.members.push(member1)
+            incrementalSnapshot.members.push(member2)
+
+            const combined = await combineSnapshots(baseSnapshot.getStore(), incrementalSnapshot.getStore())
+            expect(combined).toBeRdfIsomorphic(incrementalSnapshot.getStore())
+        });
+    });
 })
