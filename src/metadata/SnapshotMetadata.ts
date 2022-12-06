@@ -16,15 +16,18 @@ import {dateToLiteral} from "../util/TimestampUtil";
  * A Snapshot is a versioned LDES where only the most recent versions until a certain timestamp of a versioned LDES remain
  */
 export interface ISnapshot extends N3Support {
+    /**
+     * Identifier of the snapshot (which in itself is an LDES)
+     */
     eventStreamIdentifier: string
     timestampPath: string
     versionOfPath: string
     /**
-     * snapshotOf points to another LDES identifier from which it was created
+     * The identifier of the LDES from which the snapshot was created
      */
     snapshotOf: string
     /**
-     * snapshotUntil marks the dateTime at which the snapshot was created
+     * Marks the dateTime at which the snapshot was created
      */
     snapshotUntil: Date
 

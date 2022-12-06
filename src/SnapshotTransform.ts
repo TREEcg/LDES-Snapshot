@@ -13,6 +13,7 @@ import {createSnapshotMetadata, extractDate, extractObjectIdentifier, isMember} 
 import {Logger} from "./logging/Logger";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
+import {makeTriples} from "./util/Conversion";
 
 export interface ISnapshotOptions {
     date?: Date;
@@ -136,25 +137,17 @@ export class SnapshotTransform extends Transform {
                 versionOfProperty: namedNode(this.versionOfPath),
                 timestampProperty: namedNode(this.timestampPath)
             });
-            // code below here is to transform quads to triples
-            for (const q of materializedQuads) {
-                if (q.predicate.value === this.timestampPath) {
-                    // have version object id as indication for the update
-                    transformedTriples.push(quad(namedNode(this.extractObjectIdentifier(member)), q.predicate, q.object))
-                } else {
-                    // note: ugly fix to undefined problem, copying all other triples
-                    if (q.subject) {
-                        transformedTriples.push(quad(q.subject, q.predicate, q.object));
-                    } else {
-                        transformedTriples.push(quad(namedNode(q.graph.value), q.predicate, q.object));
-                    }
-                }
-            }
+            // transform quads to triples
+            transformedTriples.push(...makeTriples(materializedQuads, {
+                objectIdentifier: this.extractObjectIdentifier(member),
+                timestampPath: this.timestampPath
+            }))
         } else {
             transformedTriples.push(...member.quads)
         }
         return transformedTriples
     }
+
     /**
      * Extracts the timestamp from a member (which is a version-object).
      * note: only handles xsd:dateTime

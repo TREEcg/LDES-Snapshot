@@ -1,4 +1,4 @@
-import {turtleStringToStore} from "../src/util/Conversion";
+import {storeToString, turtleStringToStore} from "../src/util/Conversion";
 import {Snapshot} from "../src/Snapshot";
 import {DataFactory, Literal} from "n3";
 import {ISnapshotOptions} from "../src/SnapshotTransform";

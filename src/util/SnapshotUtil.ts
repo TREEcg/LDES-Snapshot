@@ -7,6 +7,8 @@ import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import {Member} from "@treecg/types";
 import {SnapshotMetadataInitializer} from "../metadata/SnapshotMetadataInitializer";
+import {SnapshotMetadataParser} from "../metadata/SnapshotMetadataParser";
+import {Snapshot} from "../Snapshot";
 
 /***************************************
  * Title: snapshotUtil
@@ -157,3 +159,38 @@ export function extractObjectIdentifier(store: Store, versionOfPath: string): st
     return objectIdentifiers[0].value
 }
 
+/**
+ * Combines two snapshots from the same LDES to one snapshot.
+ * Can be used to add incremental changes to an existing snapshot.
+ * @param snapshot1 an N3 store containing a snapshot from a given LDES.
+ * @param snapshot2 an N3 store containing a snapshot from a given LDES.
+ */
+export async function combineSnapshots(snapshot1: Store, snapshot2: Store): Promise<Store> {
+    // Note: this function is not efficient at all
+    const snapshot1Metadata = SnapshotMetadataParser.extractSnapshotMetadata(snapshot1)
+    const snapshot2Metadata = SnapshotMetadataParser.extractSnapshotMetadata(snapshot2)
+
+    if (snapshot1Metadata.snapshotOf !== snapshot2Metadata.snapshotOf) {
+        throw new Error("The two given snapshots do not come from the same LDES. Thus they can not be combined.")
+    }
+    const mostRecentTime = new Date(Math.max(snapshot1Metadata.snapshotUntil.valueOf(), snapshot2Metadata.snapshotUntil.valueOf()))
+    const baseSnapshot = snapshot1Metadata.snapshotUntil !== mostRecentTime ? snapshot1Metadata : snapshot2Metadata
+    const incrementalSnapshot = snapshot1Metadata.snapshotUntil === mostRecentTime ? snapshot1Metadata : snapshot2Metadata
+
+    const originalLDES = baseSnapshot.snapshotOf
+    const snapshotIdentifier = incrementalSnapshot.eventStreamIdentifier
+
+    // create store which contains all members from the two snapshots
+    baseSnapshot.members.push(...incrementalSnapshot.members)
+    const store = baseSnapshot.getStore()
+
+    // create a snapshot from the new combined store (which is the base snapshot + incremental changes)
+    const combinedSnapshot = new Snapshot(store)
+    const combinedSnapshotStore = await combinedSnapshot.create({ ldesIdentifier: baseSnapshot.eventStreamIdentifier, snapshotIdentifier })
+
+    // point to correct LDES from which it was created + add the created Time (which is the time of at which the incremental snapshot was created)
+    const combinedSnapshotMetadata = SnapshotMetadataParser.extractSnapshotMetadata(combinedSnapshotStore)
+    combinedSnapshotMetadata.snapshotOf = originalLDES
+    combinedSnapshotMetadata.snapshotUntil = mostRecentTime
+    return combinedSnapshotMetadata.getStore()
+}
