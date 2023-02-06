@@ -6,6 +6,9 @@ import {ISnapshotOptions} from "../SnapshotTransform";
 import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
 import {Member} from "@treecg/types";
+import {SnapshotMetadataInitializer} from "../metadata/SnapshotMetadataInitializer";
+import {SnapshotMetadataParser} from "../metadata/SnapshotMetadataParser";
+import {Snapshot} from "../Snapshot";
 
 /***************************************
  * Title: snapshotUtil
@@ -33,11 +36,7 @@ export function createSnapshotMetadata(options: ISnapshotOptions): Store {
     } else {
         if (!options.versionOfPath) throw new Error("No versionOfPath was given in options")
         if (!options.timestampPath) throw new Error("No timestampPath was given in options")
-        store.add(quad(snapshotIdentifier, namedNode(RDF.type), namedNode(LDES.EventStream)))
-        store.add(quad(snapshotIdentifier, namedNode(LDES.versionOfPath), namedNode(options.versionOfPath)))
-        store.add(quad(snapshotIdentifier, namedNode(LDES.timestampPath), namedNode(options.timestampPath)))
-        // todo: maybe add a reference to the original LDES? e.g. predicate: ldes:isSnapshotOf
-        //  on top of that: also add the time of the ldes. e.g. predicate: ldes:snapshotAt
+        store.addQuads(SnapshotMetadataInitializer.generateSnapshotMetadata(options).getStore().getQuads(null, null, null,null))
     }
     return store
 }
@@ -59,9 +58,9 @@ export function retrieveVersionOfProperty(store: Store, ldesIdentifier: string):
 }
 
 /**
- * Retrieves the timestampPath of a version LDES
- * @param store
- * @param ldesIdentifier
+ * Retrieves the timestampPath of a versioned LDES
+ * @param store an N3 store
+ * @param ldesIdentifier The identifier of the LDES
  * @returns {string}
  */
 export function retrieveTimestampProperty(store: Store, ldesIdentifier: string): string {
@@ -76,8 +75,8 @@ export function retrieveTimestampProperty(store: Store, ldesIdentifier: string):
 
 /**
  * Creates ISnapshotOptions from a N3 Store which contains a versioned LDES
- * @param store
- * @param ldesIdentifier
+ * @param store an N3 store
+ * @param ldesIdentifier The identifier of the LDES
  * @returns {{versionOfPath: string, ldesIdentifier: string, timestampPath: string}}
  */
 export function extractSnapshotOptions(store: Store, ldesIdentifier: string): ISnapshotOptions {
@@ -136,8 +135,8 @@ export function extractMaterializedIdMaterialized(member: Member): string {
 
 /**
  * Extracts the date from a member. Note: the date must be of type xsd:dateTime
- * @param store
- * @param timestampPath
+ * @param store N3 Store only containing the member
+ * @param timestampPath the `ldes:timestampPath` of the versioned LDES
  */
 export function extractDate(store: Store, timestampPath: string): Date {
     const dateTimeLiterals = store.getObjects(null, namedNode(timestampPath), null)
@@ -148,15 +147,50 @@ export function extractDate(store: Store, timestampPath: string): Date {
 }
 
 /**
- * Extracts the version Identifier from a member
- * @param store
- * @param versionOfPath
+ * Extracts the object Identifier from a member
+ * @param store N3 Store only containing the member
+ * @param versionOfPath the `ldes:versionOfPath` of the versioned LDES
  */
-export function extractVersionId(store: Store, versionOfPath: string): string {
-    const versionIds = store.getObjects(null, namedNode(versionOfPath), null)
-    if (versionIds.length !== 1) {
-        throw Error(`Found ${versionIds.length} versionOfPaths.`)
+export function extractObjectIdentifier(store: Store, versionOfPath: string): string {
+    const objectIdentifiers = store.getObjects(null, namedNode(versionOfPath), null)
+    if (objectIdentifiers.length !== 1) {
+        throw Error(`Found ${objectIdentifiers.length} versionOfPaths.`)
     }
-    return versionIds[0].value
+    return objectIdentifiers[0].value
 }
 
+/**
+ * Combines two snapshots from the same LDES to one snapshot.
+ * Can be used to add incremental changes to an existing snapshot.
+ * @param snapshot1 an N3 store containing a snapshot from a given LDES.
+ * @param snapshot2 an N3 store containing a snapshot from a given LDES.
+ */
+export async function combineSnapshots(snapshot1: Store, snapshot2: Store): Promise<Store> {
+    // Note: this function is not efficient at all
+    const snapshot1Metadata = SnapshotMetadataParser.extractSnapshotMetadata(snapshot1)
+    const snapshot2Metadata = SnapshotMetadataParser.extractSnapshotMetadata(snapshot2)
+
+    if (snapshot1Metadata.snapshotOf !== snapshot2Metadata.snapshotOf) {
+        throw new Error("The two given snapshots do not come from the same LDES. Thus they can not be combined.")
+    }
+    const mostRecentTime = new Date(Math.max(snapshot1Metadata.snapshotUntil.valueOf(), snapshot2Metadata.snapshotUntil.valueOf()))
+    const baseSnapshot = snapshot1Metadata.snapshotUntil !== mostRecentTime ? snapshot1Metadata : snapshot2Metadata
+    const incrementalSnapshot = snapshot1Metadata.snapshotUntil === mostRecentTime ? snapshot1Metadata : snapshot2Metadata
+
+    const originalLDES = baseSnapshot.snapshotOf
+    const snapshotIdentifier = incrementalSnapshot.eventStreamIdentifier
+
+    // create store which contains all members from the two snapshots
+    baseSnapshot.members.push(...incrementalSnapshot.members)
+    const store = baseSnapshot.getStore()
+
+    // create a snapshot from the new combined store (which is the base snapshot + incremental changes)
+    const combinedSnapshot = new Snapshot(store)
+    const combinedSnapshotStore = await combinedSnapshot.create({ ldesIdentifier: baseSnapshot.eventStreamIdentifier, snapshotIdentifier })
+
+    // point to correct LDES from which it was created + add the created Time (which is the time of at which the incremental snapshot was created)
+    const combinedSnapshotMetadata = SnapshotMetadataParser.extractSnapshotMetadata(combinedSnapshotStore)
+    combinedSnapshotMetadata.snapshotOf = originalLDES
+    combinedSnapshotMetadata.snapshotUntil = mostRecentTime
+    return combinedSnapshotMetadata.getStore()
+}

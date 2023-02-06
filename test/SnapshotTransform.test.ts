@@ -11,15 +11,16 @@ import literal = DataFactory.literal;
 
 
 describe("A SnapshotTransform", () => {
+    // TODO: rewrite this test suite
     const ldesIdentifier = 'http://example.org/ES'
     const snapshotIdentifier = 'http://example.org/snapshot'
     const date = new Date()
-
+    let ldes: string
     let store: Store
     let memberStream: Readable
     let snapshotOptions: ISnapshotOptions
     beforeAll(async () => {
-        const ldes = `
+        ldes = `
 @prefix dct: <http://purl.org/dc/terms/> .
 @prefix ldes: <https://w3id.org/ldes#> .
 @prefix tree: <https://w3id.org/tree#> .
@@ -41,12 +42,13 @@ ex:resource1v1
     dct:issued "2021-12-15T12:00:00.000Z"^^xsd:dateTime;
     dct:title "Title has been updated once".
 `
+
+    })
+    beforeEach(async () => {
         store = await turtleStringToStore(ldes)
         snapshotOptions = extractSnapshotOptions(store, ldesIdentifier)
         snapshotOptions.date = date
         snapshotOptions.snapshotIdentifier = snapshotIdentifier
-    })
-    beforeEach(() => {
         memberStream = storeAsMemberStream(store)
     })
 
@@ -87,6 +89,34 @@ ex:resource1v1
             memberStreamTransformed.on('data', () => {
             })
 
+        })
+        await test
+    })
+
+    it("generates a quadstream for metadata when no members are present.", async () => {
+        const myReadable = new Readable({
+            objectMode: true,
+            read() {
+                this.push(null)
+            }
+        })
+        const snapshotTransformer = new SnapshotTransform(snapshotOptions)
+        const memberStreamTransformed = myReadable.pipe(snapshotTransformer)
+        const test = new Promise((resolve, reject) => {
+            memberStreamTransformed.on('end', resolve).on('error', reject)
+            memberStreamTransformed.on('metadata', quads => {
+                try {
+                    expect(quads).toBeInstanceOf(Array)
+                    const metadataStore = new Store(quads)
+                    expect(metadataStore.getQuads(snapshotIdentifier, RDF.type, LDES.EventStream, null).length).toBe(1)
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.versionOfPath, snapshotOptions.versionOfPath!, null).length).toBe(1)
+                    expect(metadataStore.getQuads(snapshotIdentifier, LDES.timestampPath, snapshotOptions.timestampPath!, null).length).toBe(1)
+                } catch (e) {
+                    reject(e)
+                }
+            })
+            memberStreamTransformed.on('data', () => {
+            })
         })
         await test
     })
