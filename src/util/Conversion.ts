@@ -8,12 +8,10 @@ import {DataFactory, Store, Writer} from "n3";
 import {ParseOptions} from "rdf-parse/lib/RdfParser";
 import {Readable} from "stream";
 import {TREE} from "./Vocabularies";
-import namedNode = DataFactory.namedNode;
 import {Member} from "@treecg/types";
 import {Quad} from "@rdfjs/types";
+import namedNode = DataFactory.namedNode;
 import quad = DataFactory.quad;
-import {SnapshotMetadataParser} from "../metadata/SnapshotMetadataParser";
-import {Snapshot} from "../Snapshot";
 
 const rdfParser = require("rdf-parse").default;
 const storeStream = require("rdf-store-stream").storeStream;
@@ -76,7 +74,7 @@ export function storeAsMemberStream(store: Store): Readable {
  * extract members without containment triple
  * @param store
  * @param ldesIdentifier
- * @returns {Store<Quad, Quad, Quad, Quad>[]}
+ * @returns {Member[]}
  */
 export function extractMembers(store: Store, ldesIdentifier: string): Member[] {
     const memberSubjects = store.getObjects(ldesIdentifier, TREE.member, null)

@@ -1,11 +1,11 @@
 import "jest-rdf"
 import {DataFactory, Store} from "n3";
 import {storeToString, turtleStringToStore} from "../../src/util/Conversion";
-import {namedNode} from "@rdfjs/data-model";
 import {DCT, LDES, RDF, TREE} from "../../src/util/Vocabularies";
 import literal = DataFactory.literal;
 import {dateToLiteral} from "../../src/util/TimestampUtil";
 import {SnapshotMetadataParser} from "../../src/metadata/SnapshotMetadataParser";
+import namedNode = DataFactory.namedNode;
 
 function addMember(memberId: string, date: Date, store: Store, snapshotIdentifier: string): void {
     store.addQuad(namedNode(snapshotIdentifier), TREE.terms.member, namedNode(memberId))

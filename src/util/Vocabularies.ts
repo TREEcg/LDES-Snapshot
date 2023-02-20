@@ -1,6 +1,7 @@
 // Creating vocabularies is copied from https://github.com/solid/community-server/blob/b42150cf52212ff2d6ba76e0db78faf71b10db89/src/util/Vocabularies.ts
-import {namedNode} from '@rdfjs/data-model';
 import {NamedNode} from 'rdf-js';
+import {DataFactory} from "n3";
+import namedNode = DataFactory.namedNode;
 
 type RecordOf<TKey extends any[], TValue> = Record<TKey[number], TValue>;
 

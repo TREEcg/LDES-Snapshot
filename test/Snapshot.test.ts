@@ -5,10 +5,10 @@ import {ISnapshotOptions} from "../src/SnapshotTransform";
 import {DCT, LDES, RDF, TREE} from "../src/util/Vocabularies";
 import {dateToLiteral, extractDateFromLiteral} from "../src/util/TimestampUtil";
 import quad = DataFactory.quad;
-import {namedNode} from "@rdfjs/data-model";
 import {SnapshotMetadataParser} from "../src/metadata/SnapshotMetadataParser";
 import "jest-rdf"
 import {combineSnapshots} from "../src/util/SnapshotUtil";
+import namedNode = DataFactory.namedNode;
 
 describe("A Snapshot", () => {
     const ldesExample = `

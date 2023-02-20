@@ -7,8 +7,8 @@
 import {Member} from "@treecg/types";
 import {N3Support} from "./generic/Interfaces";
 import {Quad, Term} from "@rdfjs/types";
-import {namedNode} from "@rdfjs/data-model";
-import {Store} from "n3";
+import {DataFactory, Store} from "n3";
+import namedNode = DataFactory.namedNode;
 
 /**
  * an extension of {@link Member}

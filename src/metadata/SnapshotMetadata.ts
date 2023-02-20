@@ -7,10 +7,10 @@
 
 import {N3Support} from "./generic/Interfaces";
 import {ISnapshotMember} from "./SnapshotMember";
-import {Store} from "n3";
-import {namedNode} from "@rdfjs/data-model";
+import {DataFactory, Store} from "n3";
 import {LDES, RDF, TREE} from "../util/Vocabularies";
 import {dateToLiteral} from "../util/TimestampUtil";
+import namedNode = DataFactory.namedNode;
 
 /**
  * A Snapshot is a versioned LDES where only the most recent versions until a certain timestamp of a versioned LDES remain
